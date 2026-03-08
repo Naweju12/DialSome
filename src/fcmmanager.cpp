@@ -16,15 +16,20 @@ FCMManager* FCMManager::instance() {
     return s_instance;
 }
 
-void FCMManager::processIncomingSignal(const QString &type, const QString &roomId, const QString &email) {
-    qDebug() << "FCMManager: Received" << type << "from" << email;
-    emit callSignalReceived(type, roomId, email);
+void FCMManager::processIncomingSignal(const QString &roomId, const QString &email) {
+    qDebug() << "FCMManager: Received call from" << email;
+    emit callSignalReceived(roomId, email);
+}
+
+void FCMManager::processCallEndingSignal(const QString &email) {
+    qDebug() << "FCMManager: Received call ending signal";
+    emit callEndingSignal();
 }
 
 // JNI Bridge: Matches the native method in MyFirebaseMessagingService.java
 extern "C" {
-    JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MyFirebaseMessagingService_onFCMMessageReceived(
-        JNIEnv* env, jobject, jstring type, jstring roomId, jstring email) {
+    JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MyFirebaseMessagingService_onCallMessageReceive(
+        JNIEnv* env, jobject, jstring roomId, jstring email) {
         
         FCMManager* manager = FCMManager::instance();
         if (!manager) {
@@ -32,13 +37,12 @@ extern "C" {
             return;
         }
 
-        QString typeStr = QJniObject(type).toString();
         QString roomStr = QJniObject(roomId).toString();
         QString emailStr = QJniObject(email).toString();
 
         // Invoke on the main thread to safely emit signals and update UI
         QMetaObject::invokeMethod(manager, [=]() {
-            manager->processIncomingSignal(typeStr, roomStr, emailStr);
+            manager->processIncomingSignal(roomStr, emailStr);
         }, Qt::QueuedConnection);
     }
 }
@@ -50,6 +54,17 @@ extern "C" {
         QString tokenStr = QJniObject(token).toString();
         QMetaObject::invokeMethod(FCMManager::instance(), [=]() {
             FCMManager::instance()->updateTokenOnBackend(tokenStr);
+        }, Qt::QueuedConnection);
+    }
+}
+
+extern "C" {
+    JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MyFirebaseMessagingService_onCallMessageEnd(
+        JNIEnv* env, jobject, jstring email) {
+        
+        QString emailStr = QJniObject(email).toString();
+        QMetaObject::invokeMethod(FCMManager::instance(), [=]() {
+            FCMManager::instance()->processCallEndingSignal(emailStr);
         }, Qt::QueuedConnection);
     }
 }

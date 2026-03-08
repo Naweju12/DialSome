@@ -66,6 +66,7 @@ private:
     QPointer<Settings> m_settings;
     QPointer<APIService> m_api;
     bool m_isCaller = false;
+    QString receiverEmail = "";
 };
 
 #endif

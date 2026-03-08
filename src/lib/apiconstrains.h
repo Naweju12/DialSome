@@ -6,6 +6,7 @@ namespace API {
 
   namespace Voice {
     const QString call = "/voicecall/send";
+    const QString endCall = "/voicecall/endcall";
   }
 
   namespace Auth {

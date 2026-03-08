@@ -209,6 +209,7 @@ void Backend::startCall(const QString &email) {
         }
 
         this->m_isCaller = true;
+        this->receiverEmail = email;
         setMessage("Connecting to the server...");
         connect(this->m_api, &APIService::roomFetched, this, [this](QString roomId) {
             this->setMessage("Connecting to the room: " + roomId);
@@ -331,14 +332,17 @@ void Backend::Startup() {
             this->m_api->update_fcm(token, this->m_jwtAccessToken);
         });
 
-        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &type, const QString &roomId, const QString &email) {
-            qDebug() << "Received the response";
-            if (type == "incoming_call") {
-                qDebug() << "Starting the call";
-                this->setMessage("Incoming call from " + email);
-                this->joinCall(roomId);
-            }
+        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email) {
+            qDebug() << "Starting the call";
+            this->setMessage("Incoming call from " + email);
+            this->joinCall(roomId);
         });
+
+        connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
+            qDebug() << "Call Ended";
+            this->setMessage("Call Ended");
+        });
+
         emit this->settingsLoaded();
     });
 
@@ -366,5 +370,11 @@ void Backend::requestNotificationPermission() {
 }
 
 void Backend::endCall() {
-    emit this->callEnded();
+    connect(this->m_api, &APIService::endCallSuccess, this, [this]() {
+        emit this->callEnded();
+    });
+
+    if (this->receiverEmail.length() > 0) {
+        this->m_api->end_call(this->receiverEmail, this->m_jwtAccessToken);
+    }
 }
