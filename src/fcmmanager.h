@@ -14,12 +14,12 @@ public:
     explicit FCMManager(SecureStorage *storage, QObject *parent = nullptr);
     void updateTokenOnBackend(const QString &token);
     static FCMManager* instance();
-    void processIncomingSignal(const QString &roomId, const QString &email);
+    void processIncomingSignal(const QString &roomId, const QString &email, const QString &roomName);
     void processCallEndingSignal(const QString &email);
 
 signals:
     // Signal to notify the Backend or UI of an incoming call
-    void callSignalReceived(const QString &roomId, const QString &email);
+    void callSignalReceived(const QString &roomId, const QString &email, const QString &roomName);
     void fcmTokenReceived(const QString &token);
     void callEndingSignal();
 

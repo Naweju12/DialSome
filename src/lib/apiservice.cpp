@@ -97,13 +97,23 @@ void APIService::get_room(QString email, QString accessToken) {
             }
             QJsonObject dataJson = jsonObj.value("data").toObject();
 
-            if (dataJson.contains("room_id")) {
-                QString roomId = dataJson.value("room_id").toString();
-                emit this->roomFetched(roomId);
-            } else {
+            if (!dataJson.contains("room_id")) {
                 qDebug() << "No `room_id` key found";
                 emit this->roomFetchError("Failed to connect to the server");
+                reply->deleteLater();
+                return;
             }
+
+            if (!dataJson.contains("room_name")) {
+                qDebug() << "No `room_name` key found";
+                emit this->roomFetchError("Failed to connect to the server");
+                reply->deleteLater();
+                return;
+            }
+
+            QString roomId = dataJson.value("room_id").toString();
+            QString roomName = dataJson.value("room_name").toString();
+            emit this->roomFetched(roomId, roomName);
         
             reply->deleteLater();
         });

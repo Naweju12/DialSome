@@ -30,7 +30,7 @@ ColumnLayout {
             }
 
             Text {
-                text: "User"
+                text: myBackend.callerName
                 color: "#FFFFFF"
                 Layout.alignment: Qt.AlignHCenter
 

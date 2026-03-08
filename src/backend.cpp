@@ -209,15 +209,17 @@ void Backend::startCall(const QString &email) {
         }
 
         this->m_isCaller = true;
-        this->receiverEmail = email;
         setMessage("Connecting to the server...");
-        connect(this->m_api, &APIService::roomFetched, this, [this](QString roomId) {
+        connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
             this->setMessage("Connecting to the room: " + roomId);
             QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
             m_webSocket.open(QUrl(wsURL));
-
+            
+            this->m_callerEmail = email;
+            this->m_callerName = roomName;
             emit this->startingCall();
-    
+            emit this->callerInfoChanged();
+
             QJniObject context = QNativeInterface::QAndroidApplication::context();
             m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
 
@@ -249,12 +251,14 @@ void Backend::joinCall(const QString &roomId) {
         
         QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
         m_webSocket.open(QUrl(wsURL));
-
+        
         // Initialize WebRTC exactly like the caller
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
-
+        
         if (m_webrtc.isValid()) {
+            emit this->startingCall();
+            emit this->callerInfoChanged();
             m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
             m_webrtc.callMethod<void>("createPeerConnection");
         }
@@ -332,9 +336,11 @@ void Backend::Startup() {
             this->m_api->update_fcm(token, this->m_jwtAccessToken);
         });
 
-        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email) {
+        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
             qDebug() << "Starting the call";
             this->setMessage("Incoming call from " + email);
+            this->m_callerEmail = email;
+            this->m_callerName = roomName;
             this->joinCall(roomId);
         });
 
@@ -374,7 +380,15 @@ void Backend::endCall() {
         emit this->callEnded();
     });
 
-    if (this->receiverEmail.length() > 0) {
-        this->m_api->end_call(this->receiverEmail, this->m_jwtAccessToken);
+    if (this->m_callerEmail.length() > 0) {
+        this->m_api->end_call(this->m_callerEmail, this->m_jwtAccessToken);
     }
+}
+
+QString Backend::callerEmail() const {
+    return this->m_callerEmail;
+}
+
+QString Backend::callerName() const {
+    return this->m_callerName;
 }

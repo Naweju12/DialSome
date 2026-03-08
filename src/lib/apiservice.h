@@ -30,7 +30,7 @@ signals:
     void tokenRefreshError(QString error);
     void invalidSession();
     void roomFetchError(QString error);
-    void roomFetched(QString roomId);
+    void roomFetched(QString roomId, QString roomName);
     void endCallSuccess();
     void endCallFailed();
 

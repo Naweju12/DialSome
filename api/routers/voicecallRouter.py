@@ -55,13 +55,14 @@ async def call_person(
     "type": "incoming_call",
     "room_id": room_id,
     "caller_email": current_user.email,
+    "caller_name": current_user.firstname
   }
   await fcm.send_fcm_notification(target_user.fcm_token, payload)
   return JSONResponse(
     content={
       "status": True,
       "message": "Offer sent successfully",
-      "data": {"room_id": room_id},
+      "data": {"room_id": room_id, "room_name": target_user.firstname},
     },
     status_code=status.HTTP_200_OK,
   )
