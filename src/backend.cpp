@@ -153,11 +153,28 @@ Backend::Backend(QObject *parent) : QObject(parent) {
             context.object()
         );
 
+        QJniObject roomNameJni = QJniObject::callStaticMethod<jstring>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "getIncomingRoomName",
+            "(Landroid/content/Context;)Ljava/lang/String;",
+            context.object()
+        );
+
+        QJniObject emailJni = QJniObject::callStaticMethod<jstring>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "getIncomingCallerEmail",
+            "(Landroid/content/Context;)Ljava/lang/String;",
+            context.object()
+        );
+
         QString roomId = roomIdJni.toString();
+        QString roomName = roomNameJni.toString();
+        QString email = emailJni.toString();
+        
         if (!roomId.isEmpty()) {
             qDebug() << "App was woken up for a call! Room:" << roomId;
             // Optionally prompt the user, or immediately join:
-            joinCall(roomId);
+            joinCall(roomId, email, roomName);
         }
     #endif
 }
@@ -235,10 +252,10 @@ void Backend::startCall(const QString &email) {
 #endif
 }
 
-void Backend::joinCall(const QString &roomId) {
+void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
 #ifdef Q_OS_ANDROID
     QMicrophonePermission micPermission;
-    qApp->requestPermission(micPermission, [this, roomId](const QPermission &permission) {
+    qApp->requestPermission(micPermission, [this, roomId, email, roomName](const QPermission &permission) {
         if (permission.status() != Qt::PermissionStatus::Granted) {
             setMessage("Microphone permission denied!");
             return;
@@ -258,6 +275,8 @@ void Backend::joinCall(const QString &roomId) {
         
         if (m_webrtc.isValid()) {
             emit this->startingCall();
+            this->m_callerEmail = email;
+            this->m_callerName = roomName;
             emit this->callerInfoChanged();
             m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
             m_webrtc.callMethod<void>("createPeerConnection");
@@ -339,9 +358,7 @@ void Backend::Startup() {
         connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
             qDebug() << "Starting the call";
             this->setMessage("Incoming call from " + email);
-            this->m_callerEmail = email;
-            this->m_callerName = roomName;
-            this->joinCall(roomId);
+            this->joinCall(roomId, email, roomName);
         });
 
         connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {

@@ -31,7 +31,7 @@ public:
     QString message() const;
     void setMessage(const QString &msg);
     Q_INVOKABLE void startCall(const QString &email);
-    Q_INVOKABLE void joinCall(const QString &roomId);
+    Q_INVOKABLE void joinCall(const QString &roomId, const QString &email, const QString &roomName);
     void handleLocalIce(const QJsonObject &json);
     void handleLocalSdp(const QJsonObject &json);
     Q_INVOKABLE void Startup();
