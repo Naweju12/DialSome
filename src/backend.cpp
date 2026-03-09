@@ -170,7 +170,7 @@ Backend::Backend(QObject *parent) : QObject(parent) {
         QString roomId = roomIdJni.toString();
         QString roomName = roomNameJni.toString();
         QString email = emailJni.toString();
-        
+
         if (!roomId.isEmpty()) {
             qDebug() << "App was woken up for a call! Room:" << roomId;
             // Optionally prompt the user, or immediately join:
@@ -362,8 +362,17 @@ void Backend::Startup() {
         });
 
         connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
+            if (this->m_webrtc.isValid()) {
+                this->m_webrtc.callMethod<void>("close"); 
+                this->m_webrtc = QJniObject(); // Clear the object
+            }
+            
+            if (m_webSocket.isValid()) {
+                m_webSocket.close();
+            }
+            
             qDebug() << "Call Ended";
-            this->setMessage("Call Ended");
+            emit this->callEnded();
         });
 
         emit this->settingsLoaded();
@@ -394,6 +403,15 @@ void Backend::requestNotificationPermission() {
 
 void Backend::endCall() {
     connect(this->m_api, &APIService::endCallSuccess, this, [this]() {
+        if (this->m_webrtc.isValid()) {
+            this->m_webrtc.callMethod<void>("close", "()V");
+            this->m_webrtc = QJniObject(); // Clear the object
+        }
+        
+        if (m_webSocket.isValid()) {
+            m_webSocket.close();
+        }
+
         emit this->callEnded();
     });
 
