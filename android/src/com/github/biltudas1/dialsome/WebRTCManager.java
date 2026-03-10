@@ -23,6 +23,7 @@ public class WebRTCManager {
     public native void onLocalIceCandidate(String sdp, String sdpMid, int sdpMLineIndex);
     public native void onLocalSdp(String sdp, String type);
     public native void onCallEstablished();
+    public native void onCallDisconnected();
 
     public void init(Context context) {
         PeerConnectionFactory.initialize(
@@ -94,6 +95,11 @@ public class WebRTCManager {
                 if (newState == PeerConnection.IceConnectionState.CONNECTED ||
                     newState == PeerConnection.IceConnectionState.COMPLETED) {
                     onCallEstablished();
+                }
+                else if (newState == PeerConnection.IceConnectionState.DISCONNECTED ||
+                         newState == PeerConnection.IceConnectionState.FAILED ||
+                         newState == PeerConnection.IceConnectionState.CLOSED) {
+                    onCallDisconnected();
                 }
             }
 
@@ -169,9 +175,9 @@ public class WebRTCManager {
 
     public void close() {
         setupAudioManager(false);
+        if (peerConnection != null) peerConnection.dispose();
         if (localAudioTrack != null) localAudioTrack.dispose();
         if (audioSource != null) audioSource.dispose();
-        if (peerConnection != null) peerConnection.dispose();
         if (factory != null) factory.dispose();
     }
 

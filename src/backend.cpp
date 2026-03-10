@@ -214,6 +214,14 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallEs
         s_instance->setMessage("Call Connected! Audio is live.");
     }, Qt::QueuedConnection);
 }
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDisconnected(JNIEnv*, jobject) {
+    if (!s_instance) return;
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        qDebug() << "Call disconnected via WebRTC ICE state change";
+        s_instance->endCall();
+    }, Qt::QueuedConnection);
+}
 }
 
 void Backend::startCall(const QString &email) {
@@ -362,17 +370,7 @@ void Backend::Startup() {
         });
 
         connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
-            if (this->m_webrtc.isValid()) {
-                this->m_webrtc.callMethod<void>("close"); 
-                this->m_webrtc = QJniObject(); // Clear the object
-            }
-            
-            if (m_webSocket.isValid()) {
-                m_webSocket.close();
-            }
-            
-            qDebug() << "Call Ended";
-            emit this->callEnded();
+            this->endCall();
         });
 
         emit this->settingsLoaded();
@@ -402,22 +400,21 @@ void Backend::requestNotificationPermission() {
 }
 
 void Backend::endCall() {
-    connect(this->m_api, &APIService::endCallSuccess, this, [this]() {
-        if (this->m_webrtc.isValid()) {
-            this->m_webrtc.callMethod<void>("close", "()V");
-            this->m_webrtc = QJniObject(); // Clear the object
-        }
-        
-        if (m_webSocket.isValid()) {
-            m_webSocket.close();
-        }
-
-        emit this->callEnded();
-    });
-
-    if (this->m_callerEmail.length() > 0) {
-        this->m_api->end_call(this->m_callerEmail, this->m_jwtAccessToken);
+    if (this->m_webrtc.isValid()) {
+        this->m_webrtc.callMethod<void>("close", "()V");
+        this->m_webrtc = QJniObject(); // Clear the object
     }
+
+    if (m_webSocket.isValid()) {
+        m_webSocket.close();
+    }
+
+    this->m_callerEmail = ""; 
+    this->m_callerName = "";
+    this->m_isCaller = false;
+
+    qDebug() << "Call Ended";
+    emit this->callEnded();
 }
 
 QString Backend::callerEmail() const {
