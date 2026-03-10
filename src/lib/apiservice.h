@@ -23,13 +23,16 @@ public:
     void update_fcm(QString token, QString accessToken);
     void refreshToken();
     void get_room(QString email, QString accessToken);
+    void end_call(QString email, QString accessToken);
 
 signals:
     void tokenRefreshed(QString accessToken, QString refreshToken);
     void tokenRefreshError(QString error);
     void invalidSession();
     void roomFetchError(QString error);
-    void roomFetched(QString roomId);
+    void roomFetched(QString roomId, QString roomName);
+    void endCallSuccess();
+    void endCallFailed();
 
 private:
     QPointer<Settings> m_settings;

@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>icons/logo.png</file>
+        <file>icons/user.png</file>
+        <file>icons/dial.png</file>
     </qresource>
 </RCC>

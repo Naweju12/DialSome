@@ -4,7 +4,6 @@ import QtQuick.Controls.Material
 import DialSome
 import "ui"
 
-
 ApplicationWindow {
     id: mainWindow
     visible: true
@@ -44,6 +43,11 @@ ApplicationWindow {
         MainPage {}
     }
 
+    Component {
+        id: callingPageComponent
+        CallingPage {}
+    }
+
     Connections {
         target: myBackend
         function onLoginFinished(email, name, userid, refresh_token) {
@@ -56,6 +60,12 @@ ApplicationWindow {
         function onInvalidSession(error) {
             myUtils.showToast(error)
             mainStack.replace(loginPageComponent)
+        }
+        function onStartingCall() {
+            mainStack.push(callingPageComponent)
+        }
+        function onCallEnded() {
+            mainStack.pop()
         }
     }
 }

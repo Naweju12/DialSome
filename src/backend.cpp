@@ -153,11 +153,28 @@ Backend::Backend(QObject *parent) : QObject(parent) {
             context.object()
         );
 
+        QJniObject roomNameJni = QJniObject::callStaticMethod<jstring>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "getIncomingRoomName",
+            "(Landroid/content/Context;)Ljava/lang/String;",
+            context.object()
+        );
+
+        QJniObject emailJni = QJniObject::callStaticMethod<jstring>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "getIncomingCallerEmail",
+            "(Landroid/content/Context;)Ljava/lang/String;",
+            context.object()
+        );
+
         QString roomId = roomIdJni.toString();
+        QString roomName = roomNameJni.toString();
+        QString email = emailJni.toString();
+
         if (!roomId.isEmpty()) {
             qDebug() << "App was woken up for a call! Room:" << roomId;
             // Optionally prompt the user, or immediately join:
-            joinCall(roomId);
+            joinCall(roomId, email, roomName);
         }
     #endif
 }
@@ -197,6 +214,14 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallEs
         s_instance->setMessage("Call Connected! Audio is live.");
     }, Qt::QueuedConnection);
 }
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDisconnected(JNIEnv*, jobject) {
+    if (!s_instance) return;
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        qDebug() << "Call disconnected via WebRTC ICE state change";
+        s_instance->endCall();
+    }, Qt::QueuedConnection);
+}
 }
 
 void Backend::startCall(const QString &email) {
@@ -210,11 +235,16 @@ void Backend::startCall(const QString &email) {
 
         this->m_isCaller = true;
         setMessage("Connecting to the server...");
-        connect(this->m_api, &APIService::roomFetched, this, [this](QString roomId) {
+        connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
             this->setMessage("Connecting to the room: " + roomId);
             QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
             m_webSocket.open(QUrl(wsURL));
-    
+            
+            this->m_callerEmail = email;
+            this->m_callerName = roomName;
+            emit this->startingCall();
+            emit this->callerInfoChanged();
+
             QJniObject context = QNativeInterface::QAndroidApplication::context();
             m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
 
@@ -230,10 +260,10 @@ void Backend::startCall(const QString &email) {
 #endif
 }
 
-void Backend::joinCall(const QString &roomId) {
+void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
 #ifdef Q_OS_ANDROID
     QMicrophonePermission micPermission;
-    qApp->requestPermission(micPermission, [this, roomId](const QPermission &permission) {
+    qApp->requestPermission(micPermission, [this, roomId, email, roomName](const QPermission &permission) {
         if (permission.status() != Qt::PermissionStatus::Granted) {
             setMessage("Microphone permission denied!");
             return;
@@ -246,12 +276,16 @@ void Backend::joinCall(const QString &roomId) {
         
         QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
         m_webSocket.open(QUrl(wsURL));
-
+        
         // Initialize WebRTC exactly like the caller
         QJniObject context = QNativeInterface::QAndroidApplication::context();
         m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
-
+        
         if (m_webrtc.isValid()) {
+            emit this->startingCall();
+            this->m_callerEmail = email;
+            this->m_callerName = roomName;
+            emit this->callerInfoChanged();
             m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
             m_webrtc.callMethod<void>("createPeerConnection");
         }
@@ -329,14 +363,16 @@ void Backend::Startup() {
             this->m_api->update_fcm(token, this->m_jwtAccessToken);
         });
 
-        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &type, const QString &roomId, const QString &email) {
-            qDebug() << "Received the response";
-            if (type == "incoming_call") {
-                qDebug() << "Starting the call";
-                this->setMessage("Incoming call from " + email);
-                this->joinCall(roomId);
-            }
+        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
+            qDebug() << "Starting the call";
+            this->setMessage("Incoming call from " + email);
+            this->joinCall(roomId, email, roomName);
         });
+
+        connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
+            this->endCall();
+        });
+
         emit this->settingsLoaded();
     });
 
@@ -361,4 +397,30 @@ void Backend::requestNotificationPermission() {
         env->DeleteLocalRef(permArray);
         env->DeleteLocalRef(permString);
     }
+}
+
+void Backend::endCall() {
+    if (this->m_webrtc.isValid()) {
+        this->m_webrtc.callMethod<void>("close", "()V");
+        this->m_webrtc = QJniObject(); // Clear the object
+    }
+
+    if (m_webSocket.isValid()) {
+        m_webSocket.close();
+    }
+
+    this->m_callerEmail = ""; 
+    this->m_callerName = "";
+    this->m_isCaller = false;
+
+    qDebug() << "Call Ended";
+    emit this->callEnded();
+}
+
+QString Backend::callerEmail() const {
+    return this->m_callerEmail;
+}
+
+QString Backend::callerName() const {
+    return this->m_callerName;
 }

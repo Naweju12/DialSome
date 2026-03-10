@@ -92,3 +92,6 @@ android/google-services.json
 
 # Adb Test folders
 adb/
+
+# Gradle
+android/.gradle
