@@ -78,6 +78,6 @@ if(ANDROID AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
-    # add_definitions(-DQT_NO_DEBUG_OUTPUT)
+    add_definitions(-DQT_NO_DEBUG_OUTPUT)
     set(QT_QML_DEBUG OFF)
 endif()
