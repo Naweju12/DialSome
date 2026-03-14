@@ -3,14 +3,9 @@
 
 #include <QObject>
 #include <QString>
-#include <QNetworkAccessManager>
-#include <QUrl>
-#include <QNetworkRequest>
-#include <QNetworkReply>
 #include <QStandardPaths>
 #include <QDir>
 #include <QFile>
-#include <QByteArray>
 #include <QIODevice>
 #include <QSettings>
 #include <QVariant>
@@ -21,21 +16,13 @@ class Settings : public QObject {
 
 public:
     explicit Settings(QObject *parent = nullptr);
-    void loadSettings();
-    void downloadSettings(QString filePath);
     QString getHost() const;
     QString getHttpProtocol() const;
     QString getWSProtocol() const;
-
-signals:
-    void settingsDownloaded();
-    void settingsDownloadError(QString error);
-    void settingsReady();
+    void save(const QString &key, const QVariant &value);
+    QVariant get(const QString &key, const QVariant &defaultValue = QVariant()) const;
 
 private:
-    QString m_settingsUrl;
-    QNetworkAccessManager m_networkManager;
-    bool m_settingsLoaded = false;
     QScopedPointer<QSettings> m_settings;
 };
 

@@ -11,10 +11,6 @@ Rectangle {
         anchors.fill: parent
         spacing: 0
 
-        property string serverAddress: "192.168.1.1"
-        property bool useHttps: true
-        property bool useWss: true
-
         Flickable {
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -86,7 +82,7 @@ Rectangle {
                                 spacing: 8
 
                                 Text {
-                                    text: settingsPage.serverAddress
+                                    text: myBackend.serverUrl
                                     color: "#bdc3c7"
                                     font.pixelSize: 14
                                     Layout.fillWidth: true
@@ -94,7 +90,7 @@ Rectangle {
                                 }
 
                                 Rectangle {
-                                    visible: settingsPage.useHttps
+                                    visible: myBackend.useHttps
                                     implicitWidth: 46
                                     implicitHeight: 18
                                     color: "#163117"
@@ -110,7 +106,7 @@ Rectangle {
                                 }
 
                                 Rectangle {
-                                    visible: settingsPage.useWss
+                                    visible: myBackend.useWss
                                     implicitWidth: 38
                                     implicitHeight: 18
                                     color: "#0d2135"
@@ -171,7 +167,7 @@ Rectangle {
             TextField {
                 id: serverInput
                 placeholderText: "Enter Host/IP (e.g. 192.168.1.1)"
-                text: settingsPage.serverAddress
+                text: myBackend.serverUrl
                 Layout.fillWidth: true
                 color: "white"
 
@@ -202,7 +198,7 @@ Rectangle {
                     }
                     Switch {
                         id: httpsSwitch
-                        checked: settingsPage.useHttps
+                        checked: myBackend.useHttps
                     }
                 }
 
@@ -216,7 +212,7 @@ Rectangle {
                     }
                     Switch {
                         id: wssSwitch
-                        checked: settingsPage.useWss
+                        checked: myBackend.useWss
                     }
                 }
             }
@@ -249,9 +245,9 @@ Rectangle {
                     }
 
                     onClicked: {
-                        settingsPage.serverAddress = serverInput.text;
-                        settingsPage.useHttps = httpsSwitch.checked;
-                        settingsPage.useWss = wssSwitch.checked;
+                        myBackend.serverUrl = serverInput.text
+                        myBackend.useHttps = httpsSwitch.checked
+                        myBackend.useWss = wssSwitch.checked
                         serverPopup.close();
                     }
                 }

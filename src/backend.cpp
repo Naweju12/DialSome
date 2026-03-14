@@ -341,42 +341,42 @@ void Backend::setMessage(const QString &msg) { m_message = msg; emit messageChan
 
 void Backend::Startup() {
     qDebug() << "App started: Loading Settings...";
-    this->m_settings->loadSettings();
 
-    connect(this->m_settings, &Settings::settingsReady, this, [this]() {
-        this->m_api = new APIService(this->m_settings, this->m_storage, this);
-        this->m_fcm = new FCMManager(this->m_storage, this);
+    if (this->m_settings.isNull()) {
+        qDebug() << "Settings failed to load";
+        return;
+    }
 
-        // Updates the Refresh and Access Token
-        connect(this->m_api, &APIService::tokenRefreshed, this, [this](QString accessToken, QString refreshToken) {
-            this->m_storage->saveRefreshToken(refreshToken);
-            this->m_jwtAccessToken = accessToken;
-        });
+    this->m_api = new APIService(this->m_settings, this->m_storage, this);
+    this->m_fcm = new FCMManager(this->m_storage, this);
 
-        // Session Expired
-        connect(this->m_api, &APIService::invalidSession, this, [this]() {
-            emit this->invalidSession("Session Expired! Please login again");
-        });
-        
-        // Update FCM Token
-        connect(this->m_fcm, &FCMManager::fcmTokenReceived, this, [this](const QString &token) {
-            this->m_api->update_fcm(token, this->m_jwtAccessToken);
-        });
-
-        connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
-            qDebug() << "Starting the call";
-            this->setMessage("Incoming call from " + email);
-            this->joinCall(roomId, email, roomName);
-        });
-
-        connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
-            this->endCall();
-        });
-
-        emit this->settingsLoaded();
+    // Updates the Refresh and Access Token
+    connect(this->m_api, &APIService::tokenRefreshed, this, [this](QString accessToken, QString refreshToken) {
+        this->m_storage->saveRefreshToken(refreshToken);
+        this->m_jwtAccessToken = accessToken;
     });
 
-    this->m_settings->loadSettings();
+    // Session Expired
+    connect(this->m_api, &APIService::invalidSession, this, [this]() {
+        emit this->invalidSession("Session Expired! Please login again");
+    });
+    
+    // Update FCM Token
+    connect(this->m_fcm, &FCMManager::fcmTokenReceived, this, [this](const QString &token) {
+        this->m_api->update_fcm(token, this->m_jwtAccessToken);
+    });
+
+    connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
+        qDebug() << "Starting the call";
+        this->setMessage("Incoming call from " + email);
+        this->joinCall(roomId, email, roomName);
+    });
+
+    connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
+        this->endCall();
+    });
+
+    emit this->settingsLoaded();
 }
 
 bool Backend::serverConnected() const { return m_serverConnected; }
@@ -423,4 +423,35 @@ QString Backend::callerEmail() const {
 
 QString Backend::callerName() const {
     return this->m_callerName;
+}
+
+QString Backend::serverUrl() const { 
+    return m_settings->get("Server/host").toString(); 
+}
+bool Backend::useHttps() const {
+    return m_settings->get("Protocol/https").toBool(); 
+}
+bool Backend::useWss() const {
+    return m_settings->get("Protocol/wss").toBool();
+}
+
+void Backend::setServerUrl(const QString &url) {
+    if (this->serverUrl() != url) {
+        m_settings->save("Server/host", url);
+        emit this->serverUrlChanged();
+    }
+}
+
+void Backend::setUseHttps(bool value) {
+    if (this->useHttps() != value) {
+        m_settings->save("Protocol/https", value);
+        emit this->useHttpsChanged();
+    }
+}
+
+void Backend::setUseWss(bool value) {
+    if (this->useWss() != value) {
+        m_settings->save("Protocol/wss", value);
+        emit this->useWssChanged();
+    }
 }

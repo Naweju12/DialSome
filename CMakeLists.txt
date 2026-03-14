@@ -3,7 +3,9 @@ project(DialSome VERSION 0.1 LANGUAGES CXX)
 
 # Extra Metadatas
 add_definitions(-DGITHUB_REPO="https://github.com/BiltuDas1/DialSome")
-add_definitions(-DGITHUB_CONFIGURATIONS="https://raw.githubusercontent.com/BiltuDas1/DialSome/refs/heads/main/settings.ini")
+add_definitions(-DDIALSOME_SERVER="dialsome.onrender.com")
+add_definitions(-DHTTPS=true)
+add_definitions(-DWSS=true)
 
 find_package(Qt6 REQUIRED COMPONENTS
     Quick

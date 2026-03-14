@@ -1,10 +1,6 @@
 #include "settings.h"
 
 Settings::Settings(QObject *parent) : QObject(parent) {
-    this->m_settingsUrl = GITHUB_CONFIGURATIONS;
-}
-
-void Settings::loadSettings() {
     QString directory = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     QString filePath = directory + "/settings.ini";
     
@@ -13,43 +9,25 @@ void Settings::loadSettings() {
         dir.mkpath(directory);
     }
 
-    connect(this, &Settings::settingsDownloaded, this, [this, filePath]() {
-        this->m_settings.reset(new QSettings(filePath, QSettings::IniFormat));
-        emit this->settingsReady();
-    });
-    
     if (!QFile::exists(filePath)) {
-        this->downloadSettings(filePath);
-    } else {
-        // Call the download finish signal, cause it's already downloaded
-        emit this->settingsDownloaded();
-    }
-}
-
-void Settings::downloadSettings(QString filePath) {
-    QUrl url(this->m_settingsUrl);
-    QNetworkRequest request(url);
-    QNetworkReply *reply = m_networkManager.get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, filePath]() {
-        if (reply->error() == QNetworkReply::NoError) {
-            QByteArray rawData = reply->readAll();
-
-            QFile file(filePath);
-            if (file.open(QIODevice::WriteOnly)) {
-                file.write(rawData);
-                file.close();
-                qDebug() << "File saved successfully at:" << filePath;
-                emit this->settingsDownloaded();
-            } else {
-                qDebug() << "Unable to save file: " << filePath;
-                emit this->settingsDownloadError("Unable to save file: " + filePath);
-            }
-        } else {
-            qDebug() << "Unable to fetch settings from" << reply->errorString();
-            emit this->settingsDownloadError("Unable to fetch settings from: " + reply->errorString());
+        QFile file(filePath);
+        if (!file.open(QIODevice::WriteOnly)) {
+            qDebug() << "Unable to save file: " << filePath;
+            return;
         }
-        reply->deleteLater();
-    });
+        file.write("");
+        file.close();
+        qDebug() << "File saved successfully at:" << filePath;
+    }
+
+    this->m_settings.reset(new QSettings(filePath, QSettings::IniFormat));
+
+    // Default settings
+    this->m_settings->setValue("Server/host", DIALSOME_SERVER);
+    this->m_settings->setValue("Protocol/https", HTTPS);
+    this->m_settings->setValue("Protocol/wss", WSS);
+    
+    this->m_settings->sync();
 }
 
 QString Settings::getHost() const {
@@ -64,4 +42,18 @@ QString Settings::getHttpProtocol() const {
 QString Settings::getWSProtocol() const {
     bool wss = this->m_settings->value("Protocol/wss").toBool();
     return wss ? "wss" : "ws";
+}
+
+void Settings::save(const QString &key, const QVariant &value) {
+    if (this->m_settings) {
+        this->m_settings->setValue(key, value);
+        this->m_settings->sync();
+    }
+}
+
+QVariant Settings::get(const QString &key, const QVariant &defaultValue) const {
+    if (this->m_settings) {
+        return this->m_settings->value(key, defaultValue);
+    }
+    return defaultValue;
 }
