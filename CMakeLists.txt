@@ -37,6 +37,7 @@ qt_add_qml_module(DialSome
         ui/LoginPage.qml
         ui/MainPage.qml
         ui/CallingPage.qml
+        ui/SettingsPage.qml
     SOURCES
         src/lib/securestorage.h src/lib/securestorage.cpp
         src/lib/google.h src/lib/google.cpp
@@ -49,6 +50,8 @@ qt_add_qml_module(DialSome
     RESOURCES
         icons/dial.png
         icons/user.png
+        icons/settings.png
+        icons/server.png
 )
 
 qt_add_resources(DialSome "configs"

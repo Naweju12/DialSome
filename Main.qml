@@ -48,6 +48,11 @@ ApplicationWindow {
         CallingPage {}
     }
 
+    Component {
+        id: settingsPageComponent
+        SettingsPage {}
+    }
+
     Connections {
         target: myBackend
         function onLoginFinished(email, name, userid, refresh_token) {
