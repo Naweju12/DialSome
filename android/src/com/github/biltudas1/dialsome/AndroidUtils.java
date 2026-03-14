@@ -4,6 +4,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.widget.Toast;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 public class AndroidUtils {
     /**
@@ -52,5 +56,19 @@ public class AndroidUtils {
             }
         }
         return "";
+    }
+
+    public static void requestIgnoreBatteryOptimizations(Context context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            // Check if the app is already exempted
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(context.getPackageName())) {
+                // If not exempted, open the dialog to ask the user
+                Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(intent);
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.github.biltudas1.dialsome;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
@@ -18,6 +19,7 @@ public class WebRTCManager {
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
     private AudioManager audioManager;
+    private Context mContext;
 
     // Native callbacks to C++
     public native void onLocalIceCandidate(String sdp, String sdpMid, int sdpMLineIndex);
@@ -26,6 +28,8 @@ public class WebRTCManager {
     public native void onCallDisconnected();
 
     public void init(Context context) {
+        this.mContext = context;
+
         PeerConnectionFactory.initialize(
             PeerConnectionFactory.InitializationOptions.builder(context)
                 .createInitializationOptions()
@@ -94,6 +98,15 @@ public class WebRTCManager {
                 Log.d(TAG, "ICE State Change: " + newState);
                 if (newState == PeerConnection.IceConnectionState.CONNECTED ||
                     newState == PeerConnection.IceConnectionState.COMPLETED) {
+                    if (mContext != null) {
+                        Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            mContext.startForegroundService(serviceIntent);
+                        } else {
+                            mContext.startService(serviceIntent);
+                        }
+                    }
+
                     onCallEstablished();
                 }
                 else if (newState == PeerConnection.IceConnectionState.DISCONNECTED ||
@@ -174,6 +187,11 @@ public class WebRTCManager {
     }
 
     public void close() {
+        if (mContext != null) {
+            Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+            mContext.stopService(serviceIntent);
+        }
+
         setupAudioManager(false);
         if (peerConnection != null) peerConnection.dispose();
         if (localAudioTrack != null) localAudioTrack.dispose();

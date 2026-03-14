@@ -131,7 +131,6 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     });
 
     connect(this, &Backend::loginFinished, this, [this](const QString &email, const QString &displayName, const QString &userID, const QString &refresh_token) {
-        this->requestNotificationPermission();
         this->m_storage->saveRefreshToken(refresh_token);
         this->m_storage->save("id", userID); 
 
@@ -139,6 +138,21 @@ Backend::Backend(QObject *parent) : QObject(parent) {
         if (!cachedToken.isEmpty()) {
             this->m_fcm->updateTokenOnBackend(cachedToken);
         }
+        
+        this->requestNotificationPermission();
+        
+        // REQUEST BATTERY EXEMPTION
+        #ifdef Q_OS_ANDROID
+        QJniObject context = QNativeInterface::QAndroidApplication::context();
+        if (context.isValid()) {
+            QJniObject::callStaticMethod<void>(
+                "com/github/biltudas1/dialsome/AndroidUtils",
+                "requestIgnoreBatteryOptimizations",
+                "(Landroid/content/Context;)V",
+                context.object()
+            );
+        }
+        #endif
     });
 
     connect(&m_webSocket, &QWebSocket::connected, this, &Backend::onConnected);
