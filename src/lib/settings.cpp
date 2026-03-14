@@ -23,9 +23,15 @@ Settings::Settings(QObject *parent) : QObject(parent) {
     this->m_settings.reset(new QSettings(filePath, QSettings::IniFormat));
 
     // Default settings
-    this->m_settings->setValue("Server/host", DIALSOME_SERVER);
-    this->m_settings->setValue("Protocol/https", HTTPS);
-    this->m_settings->setValue("Protocol/wss", WSS);
+    if (!this->m_settings->contains("Server/host")) {
+        this->m_settings->setValue("Server/host", DIALSOME_SERVER);
+    }
+    if (!this->m_settings->contains("Protocol/https")) {
+        this->m_settings->setValue("Protocol/https", HTTPS);
+    }
+    if (!this->m_settings->contains("Protocol/wss")) {
+        this->m_settings->setValue("Protocol/wss", WSS);
+    }
     
     this->m_settings->sync();
 }
