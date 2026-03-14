@@ -3,7 +3,9 @@ project(DialSome VERSION 0.1 LANGUAGES CXX)
 
 # Extra Metadatas
 add_definitions(-DGITHUB_REPO="https://github.com/BiltuDas1/DialSome")
-add_definitions(-DGITHUB_CONFIGURATIONS="https://raw.githubusercontent.com/BiltuDas1/DialSome/refs/heads/main/settings.ini")
+add_definitions(-DDIALSOME_SERVER="dialsome.onrender.com")
+add_definitions(-DHTTPS=true)
+add_definitions(-DWSS=true)
 
 find_package(Qt6 REQUIRED COMPONENTS
     Quick
@@ -37,6 +39,7 @@ qt_add_qml_module(DialSome
         ui/LoginPage.qml
         ui/MainPage.qml
         ui/CallingPage.qml
+        ui/SettingsPage.qml
     SOURCES
         src/lib/securestorage.h src/lib/securestorage.cpp
         src/lib/google.h src/lib/google.cpp
@@ -49,6 +52,8 @@ qt_add_qml_module(DialSome
     RESOURCES
         icons/dial.png
         icons/user.png
+        icons/settings.png
+        icons/server.png
 )
 
 qt_add_resources(DialSome "configs"

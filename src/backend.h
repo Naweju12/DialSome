@@ -25,6 +25,9 @@ class Backend : public QObject {
     Q_PROPERTY(Google* google READ google CONSTANT)
     Q_PROPERTY(QString callerEmail READ callerEmail NOTIFY callerInfoChanged)
     Q_PROPERTY(QString callerName READ callerName NOTIFY callerInfoChanged)
+    Q_PROPERTY(QString serverUrl READ serverUrl WRITE setServerUrl NOTIFY serverUrlChanged)
+    Q_PROPERTY(bool useHttps READ useHttps WRITE setUseHttps NOTIFY useHttpsChanged)
+    Q_PROPERTY(bool useWss READ useWss WRITE setUseWss NOTIFY useWssChanged)
 
 public:
     explicit Backend(QObject *parent = nullptr);
@@ -41,6 +44,12 @@ public:
     Q_INVOKABLE void endCall();
     QString callerName() const;
     QString callerEmail() const;
+    QString serverUrl() const;
+    bool useHttps() const;
+    bool useWss() const;
+    void setServerUrl(const QString &url);
+    void setUseHttps(bool value);
+    void setUseWss(bool value);
 
 signals:
     void messageChanged();
@@ -53,6 +62,9 @@ signals:
     void startingCall();
     void callEnded();
     void callerInfoChanged();
+    void serverUrlChanged();
+    void useHttpsChanged();
+    void useWssChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);

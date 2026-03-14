@@ -4,7 +4,6 @@ import QtQuick.Controls
 
 ColumnLayout {
     id: mainPage
-    anchors.fill: parent
     spacing: 0
 
     Rectangle {
@@ -39,6 +38,20 @@ ColumnLayout {
 
             Item {
                 Layout.fillWidth: true
+            }
+
+            Image {
+                id: settingsBtn
+                source: "../icons/settings.png"
+                sourceSize.width: 20
+                sourceSize.height: 20
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        mainStack.push(settingsPageComponent)
+                    }
+                }
             }
         }
     }
