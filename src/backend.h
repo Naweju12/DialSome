@@ -2,6 +2,7 @@
 #define BACKEND_H
 
 #include <QObject>
+#include <QDateTime>
 #include <QString>
 #include <QJniObject>
 #include <QJsonObject>
@@ -28,6 +29,7 @@ class Backend : public QObject {
     Q_PROPERTY(QString serverUrl READ serverUrl WRITE setServerUrl NOTIFY serverUrlChanged)
     Q_PROPERTY(bool useHttps READ useHttps WRITE setUseHttps NOTIFY useHttpsChanged)
     Q_PROPERTY(bool useWss READ useWss WRITE setUseWss NOTIFY useWssChanged)
+    Q_PROPERTY(QVariantList recentCalls READ recentCalls NOTIFY recentCallsChanged)
 
 public:
     explicit Backend(QObject *parent = nullptr);
@@ -50,6 +52,8 @@ public:
     void setServerUrl(const QString &url);
     void setUseHttps(bool value);
     void setUseWss(bool value);
+    QVariantList recentCalls() const;
+    void saveToHistory(const QString &email, const QString &name, bool isIncoming);
 
 signals:
     void messageChanged();
@@ -65,6 +69,7 @@ signals:
     void serverUrlChanged();
     void useHttpsChanged();
     void useWssChanged();
+    void recentCallsChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -85,6 +90,7 @@ private:
     bool m_isCaller = false;
     QString m_callerEmail = ""; // Email of the other party
     QString m_callerName = "User"; // Name of the other party
+    QVariantList m_recentCalls;
 };
 
 #endif
