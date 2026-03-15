@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(DialSome VERSION 0.1 LANGUAGES CXX)
+project(DialSome LANGUAGES CXX)
 
 # Extra Metadatas
 add_definitions(-DGITHUB_REPO="https://github.com/BiltuDas1/DialSome")
