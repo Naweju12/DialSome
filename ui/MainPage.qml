@@ -64,8 +64,8 @@ ColumnLayout {
         Layout.topMargin: 10
         radius: 8
 
-        // 0 = Favourites, 1 = Recents, 2 = Contacts
-        property int selectedIndex: 1
+        // 0 = Dialer, 1 = Recents, 2 = Contacts
+        property int selectedIndex: 0
 
         RowLayout {
             anchors.fill: parent
@@ -79,7 +79,7 @@ ColumnLayout {
                 radius: 5
 
                 Text {
-                    text: "Favorites"
+                    text: "Dialer"
                     color: optionsSection.selectedIndex === 0 ? "#5B89F7" : "white"
                     anchors.centerIn: parent
 
@@ -161,6 +161,7 @@ ColumnLayout {
         ColumnLayout {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 20
+            visible: optionsSection.selectedIndex === 0
 
             TextField {
                 id: roomInput
@@ -168,10 +169,11 @@ ColumnLayout {
                 color: "white"
                 background: Rectangle { color: "#333"; radius: 5 }
                 Layout.preferredWidth: 250
+                Layout.alignment: Qt.AlignHCenter
             }
 
             Button {
-                text: "Start / Join Call"
+                text: "Start Call"
                 onClicked: {
                     if (roomInput.text.trim().length > 0) {
                         myBackend.startCall(roomInput.text.trim())
@@ -185,6 +187,53 @@ ColumnLayout {
                 color: "#5B89F7"
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
+            }
+        }
+
+        ListView {
+            id: recentsView
+            anchors.fill: parent
+            visible: optionsSection.selectedIndex === 1
+            model: myBackend.recentCalls
+            clip: true
+
+            delegate: ItemDelegate {
+                width: recentsView.width
+                height: 70
+
+                background: Rectangle {
+                    color: parent.pressed ? "#222" : "transparent"
+                }
+
+                contentItem: RowLayout {
+                    spacing: 15
+                    Rectangle {
+                        width: 45; height: 45; radius: 22.5; color: "#333"
+                        Image {
+                            source: "../icons/user.png"
+                            anchors.centerIn: parent
+                            sourceSize: Qt.size(45, 45)
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+                    }
+                    ColumnLayout {
+                        Text {
+                            text: modelData.name
+                            color: "white"
+                            font.bold: true
+                        }
+                        Text {
+                            text: (modelData.isIncoming ? "Incoming" : "Outgoing") + " • " + modelData.email
+                            color: "#808080"
+                            font.pixelSize: 12
+                        }
+                    }
+                }
+                onClicked: {
+                    // Re-dial the person directly from recents
+                    myBackend.startCall(modelData.email)
+                }
             }
         }
     }

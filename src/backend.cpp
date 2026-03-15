@@ -16,6 +16,12 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     this->m_google = new Google(this, this->m_storage);
     this->m_settings = new Settings(this);
 
+    QString historyJson = m_storage->get("call_history");
+    if (!historyJson.isEmpty()) {
+        QJsonDocument doc = QJsonDocument::fromJson(historyJson.toUtf8());
+        m_recentCalls = doc.toVariant().toList();
+    }
+
     connect(this, &Backend::settingsLoaded, this, [this]() {
         QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost();
         QUrl url(hostUrl);
@@ -187,6 +193,7 @@ Backend::Backend(QObject *parent) : QObject(parent) {
 
         if (!roomId.isEmpty()) {
             qDebug() << "App was woken up for a call! Room:" << roomId;
+            saveToHistory(email, roomName, true);
             // Optionally prompt the user, or immediately join:
             joinCall(roomId, email, roomName);
         }
@@ -256,6 +263,8 @@ void Backend::startCall(const QString &email) {
             
             this->m_callerEmail = email;
             this->m_callerName = roomName;
+
+            this->saveToHistory(email, roomName, false);
             emit this->startingCall();
             emit this->callerInfoChanged();
 
@@ -383,6 +392,7 @@ void Backend::Startup() {
     connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
         qDebug() << "Starting the call";
         this->setMessage("Incoming call from " + email);
+        this->saveToHistory(email, roomName, true);
         this->joinCall(roomId, email, roomName);
     });
 
@@ -468,4 +478,28 @@ void Backend::setUseWss(bool value) {
         m_settings->save("Protocol/wss", value);
         emit this->useWssChanged();
     }
+}
+
+void Backend::saveToHistory(const QString &email, const QString &name, bool isIncoming) {
+    QVariantMap log;
+    log["email"] = email;
+    log["name"] = name;
+    log["isIncoming"] = isIncoming;
+    log["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
+
+    // Add to the beginning of the list
+    m_recentCalls.prepend(log);
+
+    // Keep only the last 50 calls
+    while (m_recentCalls.size() > 50) m_recentCalls.removeLast();
+
+    // Save back to local storage
+    QJsonDocument doc = QJsonDocument::fromVariant(m_recentCalls);
+    m_storage->save("call_history", doc.toJson(QJsonDocument::Compact));
+    
+    emit recentCallsChanged();
+}
+
+QVariantList Backend::recentCalls() const {
+    return m_recentCalls;
 }
