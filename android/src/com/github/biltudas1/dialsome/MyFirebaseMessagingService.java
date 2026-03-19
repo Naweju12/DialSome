@@ -50,12 +50,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerName = data.get("caller_name");
 
                 Log.d(TAG, "FCM Signal: " + type + " Room: " + roomId + " From: " + callerEmail + "(" + callerName + ")");
+                wakeUpApp(callerEmail, roomId, callerName);
 
                 try {
                     onCallMessageReceive(roomId, callerEmail, callerName);
                 } catch (UnsatisfiedLinkError e) {
-                    Log.d(TAG, "C++ is dead. Waking up the app via Notification...");
-                    wakeUpApp(callerEmail, roomId, callerName);
+                    Log.d(TAG, "C++ is currently dead, state will be restored when Activity launches.");
                 }
             } else if ("end_call".equals(type)) {
                 String email = data.get("to");
