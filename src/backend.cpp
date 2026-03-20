@@ -246,74 +246,84 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDi
 }
 
 void Backend::startCall(const QString &email) {
-#ifdef Q_OS_ANDROID
-    QMicrophonePermission micPermission;
-    qApp->requestPermission(micPermission, [this, email](const QPermission &permission) {
-        if (permission.status() != Qt::PermissionStatus::Granted) {
-            setMessage("Microphone permission denied!");
-            return;
-        }
+    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+        qDebug() << "Call already in progress, ignoring startCall.";
+        return;
+    }
 
-        this->m_isCaller = true;
-        setMessage("Connecting to the server...");
-        connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
-            this->setMessage("Connecting to the room: " + roomId);
-            QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
-            m_webSocket.open(QUrl(wsURL));
-            
-            this->m_callerEmail = email;
-            this->m_callerName = roomName;
-
-            this->saveToHistory(email, roomName, false);
-            emit this->startingCall();
-            emit this->callerInfoChanged();
-
-            QJniObject context = QNativeInterface::QAndroidApplication::context();
-            m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
-
-            if (m_webrtc.isValid()) {
-                m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
-                // Pre-initialize PC so tracks are ready
-                m_webrtc.callMethod<void>("createPeerConnection");
+    #ifdef Q_OS_ANDROID
+        QMicrophonePermission micPermission;
+        qApp->requestPermission(micPermission, [this, email](const QPermission &permission) {
+            if (permission.status() != Qt::PermissionStatus::Granted) {
+                setMessage("Microphone permission denied!");
+                return;
             }
-        });
 
-        this->m_api->get_room(email, this->m_jwtAccessToken);
-    });
-#endif
+            this->m_isCaller = true;
+            setMessage("Connecting to the server...");
+            connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
+                this->setMessage("Connecting to the room: " + roomId);
+                QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
+                m_webSocket.open(QUrl(wsURL));
+                
+                this->m_callerEmail = email;
+                this->m_callerName = roomName;
+
+                this->saveToHistory(email, roomName, false);
+                emit this->startingCall();
+                emit this->callerInfoChanged();
+
+                QJniObject context = QNativeInterface::QAndroidApplication::context();
+                m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
+
+                if (m_webrtc.isValid()) {
+                    m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+                    // Pre-initialize PC so tracks are ready
+                    m_webrtc.callMethod<void>("createPeerConnection");
+                }
+            }, Qt::SingleShotConnection);
+
+            this->m_api->get_room(email, this->m_jwtAccessToken);
+        });
+    #endif
 }
 
 void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
-#ifdef Q_OS_ANDROID
-    QMicrophonePermission micPermission;
-    qApp->requestPermission(micPermission, [this, roomId, email, roomName](const QPermission &permission) {
-        if (permission.status() != Qt::PermissionStatus::Granted) {
-            setMessage("Microphone permission denied!");
-            return;
-        }
+    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+        qDebug() << "Call already in progress, ignoring joinCall.";
+        return;
+    }
 
-        this->m_isCaller = false;
+    #ifdef Q_OS_ANDROID
+        QMicrophonePermission micPermission;
+        qApp->requestPermission(micPermission, [this, roomId, email, roomName](const QPermission &permission) {
+            if (permission.status() != Qt::PermissionStatus::Granted) {
+                setMessage("Microphone permission denied!");
+                return;
+            }
 
-        // Skip the POST request! We already have the roomId.
-        this->setMessage("Joining room: " + roomId);
-        
-        QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
-        m_webSocket.open(QUrl(wsURL));
-        
-        // Initialize WebRTC exactly like the caller
-        QJniObject context = QNativeInterface::QAndroidApplication::context();
-        m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
-        
-        if (m_webrtc.isValid()) {
-            emit this->startingCall();
-            this->m_callerEmail = email;
-            this->m_callerName = roomName;
-            emit this->callerInfoChanged();
-            m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
-            m_webrtc.callMethod<void>("createPeerConnection");
-        }
-    });
-#endif
+            this->m_isCaller = false;
+
+            // Skip the POST request! We already have the roomId.
+            this->setMessage("Joining room: " + roomId);
+            
+            QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
+            m_webSocket.open(QUrl(wsURL));
+            
+            // Initialize WebRTC exactly like the caller
+            QJniObject context = QNativeInterface::QAndroidApplication::context();
+            m_webrtc = QJniObject("com/github/biltudas1/dialsome/WebRTCManager");
+            
+            if (m_webrtc.isValid()) {
+                emit this->startingCall();
+                this->m_callerEmail = email;
+                this->m_callerName = roomName;
+                emit this->callerInfoChanged();
+                m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+                m_webrtc.callMethod<void>("createPeerConnection");
+            }
+        });
+    #endif
 }
 
 void Backend::onConnected() {
@@ -363,6 +373,11 @@ QString Backend::message() const { return m_message; }
 void Backend::setMessage(const QString &msg) { m_message = msg; emit messageChanged(); }
 
 void Backend::Startup() {
+    if (this->m_api != nullptr) {
+        qDebug() << "Backend already initialized, ignoring Startup.";
+        return;
+    }
+
     qDebug() << "App started: Loading Settings...";
 
     if (this->m_settings.isNull()) {
