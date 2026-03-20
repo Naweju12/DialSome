@@ -18,6 +18,7 @@ import android.net.Uri;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     private static final String TAG = "DialSomeFCM";
+    private static final int INCOMING_CALL_NOTIF_ID = 1001;
 
     // Native method to notify the C++ Backend that a message arrived
     public native void onCallMessageReceive(String roomId, String email, String roomName);
@@ -51,68 +52,69 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 Log.d(TAG, "FCM Signal: " + type + " Room: " + roomId + " From: " + callerEmail + "(" + callerName + ")");
                 wakeUpApp(callerEmail, roomId, callerName);
-
-                try {
-                    onCallMessageReceive(roomId, callerEmail, callerName);
-                } catch (UnsatisfiedLinkError e) {
-                    Log.d(TAG, "C++ is currently dead, state will be restored when Activity launches.");
-                }
             } else if ("end_call".equals(type)) {
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                nm.cancel(INCOMING_CALL_NOTIF_ID);
+
                 String email = data.get("to");
-
                 Log.d(TAG, "FCM Signal: " + type + " to: " + email);
-
                 try {
                     onCallMessageEnd(email);
                 } catch (UnsatisfiedLinkError e) {
-                    Log.d(TAG, "Unable to end call, C++ id dead");
+                    Log.d(TAG, "Unable to end call, C++ is dead");
                 }
             }
         }
     }
 
     private void wakeUpApp(String callerEmail, String roomId, String roomName) {
-        Intent intent = new Intent(this, org.qtproject.qt.android.bindings.QtActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        intent.putExtra("incoming_room_id", roomId);
-        intent.putExtra("incoming_room_name", roomName);
-        intent.putExtra("incoming_caller", callerEmail);
-
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-
-        String channelId = "IncomingCalls";
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        String channelId = "IncomingCalls";
 
-        // Retrieve the default ringtone URI
+        // Create Intent for the "Accept" action
+        Intent acceptIntent = new Intent(this, CallActionReceiver.class);
+        acceptIntent.setAction("ACCEPT_CALL");
+        acceptIntent.putExtra("room_id", roomId);
+        acceptIntent.putExtra("caller_email", callerEmail);
+        acceptIntent.putExtra("caller_name", roomName);
+        PendingIntent acceptPending = PendingIntent.getService(this, 10, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Create Intent for the "Reject" action
+        Intent rejectIntent = new Intent(this, CallActionReceiver.class);
+        rejectIntent.setAction("REJECT_CALL");
+        rejectIntent.putExtra("caller_email", callerEmail);
+        PendingIntent rejectPending = PendingIntent.getService(this, 11, rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(channelId, "Incoming Calls", NotificationManager.IMPORTANCE_HIGH);
-            
-            // Set the sound on the NotificationChannel
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                     .build();
             channel.setSound(ringtoneUri, audioAttributes);
-            
             notificationManager.createNotificationChannel(channel);
         }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
-                // YOU MUST HAVE AN ICON HERE, e.g., R.drawable.icon
-                .setSmallIcon(android.R.drawable.ic_menu_call) 
+                .setSmallIcon(android.R.drawable.ic_menu_call) // Optional: replace with R.drawable.icon
                 .setContentTitle("Incoming Call")
                 .setContentText("Call from " + roomName)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
-                .setFullScreenIntent(pendingIntent, true) // THIS WAKES UP THE SCREEN
-                .setSound(ringtoneUri) // Set the sound on the Builder for older Android versions
+                // Set the pending intents
+                .setFullScreenIntent(acceptPending, true) 
+                .setContentIntent(acceptPending) // Tapping the notification body accepts the call
+                .setSound(ringtoneUri)
                 .setOngoing(true)
-                .setAutoCancel(true);
+                .setAutoCancel(true)
+                // Add the actual UI buttons to the notification
+                .addAction(android.R.drawable.ic_menu_call, "Accept", acceptPending)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Reject", rejectPending);
 
         Notification notification = builder.build();
-        notification.flags |= Notification.FLAG_INSISTENT;
-        notificationManager.notify(1001, notification);
+        notification.flags |= Notification.FLAG_INSISTENT; // Keeps the ringtone looping
+        notificationManager.notify(INCOMING_CALL_NOTIF_ID, notification);
     }
 }

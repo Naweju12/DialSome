@@ -173,7 +173,7 @@ Rectangle {
 
                 // Allow letters, numbers, dots, and hyphens (basic URL/IP validation)
                 validator: RegularExpressionValidator {
-                    regularExpression: /[a-zA-Z0-9\.\-]+/
+                    regularExpression: /[a-zA-Z0-9\.\-:]+/
                 }
 
                 background: Rectangle {
