@@ -77,13 +77,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         acceptIntent.putExtra("room_id", roomId);
         acceptIntent.putExtra("caller_email", callerEmail);
         acceptIntent.putExtra("caller_name", roomName);
-        PendingIntent acceptPending = PendingIntent.getService(this, 10, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent acceptPending = PendingIntent.getBroadcast(this, 10, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         // Create Intent for the "Reject" action
         Intent rejectIntent = new Intent(this, CallActionReceiver.class);
         rejectIntent.setAction("REJECT_CALL");
         rejectIntent.putExtra("caller_email", callerEmail);
-        PendingIntent rejectPending = PendingIntent.getService(this, 11, rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent rejectPending = PendingIntent.getBroadcast(this, 11, rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
         Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
