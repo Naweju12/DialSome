@@ -93,6 +93,19 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
         );
 
+        // Create a NEW Intent just for the Full-Screen Lock Screen popup
+        Intent fullScreenIntent = new Intent(this, MainActivity.class);
+        fullScreenIntent.setAction("SHOW_INCOMING_CALL"); // Distinct action that won't trigger the accept logic
+        fullScreenIntent.putExtra("room_id", roomId);
+        fullScreenIntent.putExtra("caller_email", callerEmail);
+        fullScreenIntent.putExtra("caller_name", roomName);
+        fullScreenIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        PendingIntent fullScreenPending = PendingIntent.getActivity(
+            this, 12, fullScreenIntent, // Use a different request code (e.g., 12)
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
         Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -112,7 +125,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 // Set the pending intents
-                .setFullScreenIntent(acceptPending, true) 
+                .setFullScreenIntent(fullScreenPending, true) 
                 .setContentIntent(acceptPending) // Tapping the notification body accepts the call
                 .setSound(ringtoneUri)
                 .setOngoing(true)

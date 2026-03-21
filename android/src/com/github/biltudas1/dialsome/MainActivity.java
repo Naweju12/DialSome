@@ -2,6 +2,8 @@ package com.github.biltudas1.dialsome;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Build;
+import android.view.WindowManager;
 import android.app.NotificationManager;
 import android.content.Context;
 import org.qtproject.qt.android.bindings.QtActivity;
@@ -13,6 +15,16 @@ public class MainActivity extends QtActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Allow the app UI to wake the screen and display over the lock screen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
+        } else {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                                 WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        }
+
         handleCallIntent(getIntent());
     }
 
