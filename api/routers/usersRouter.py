@@ -1,10 +1,11 @@
 from fastapi import APIRouter, status, Depends
 from fastapi.responses import JSONResponse
-from models import User, fcm
+from models import User, Contact, fcm, contacts
 from core import logger
 from services import users
 from typing import Mapping, Any
 from middlewares import authenticate, google
+import asyncio
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -107,9 +108,72 @@ async def register_user(
     )
 
 
+@router.post("/add")
+async def add_user(
+  data: contacts.ContactData, user_id: str = Depends(authenticate.verify_jwt)
+):
+  current_user, target_user = await asyncio.gather(
+    User.get_or_none(id=user_id), User.get_or_none(email=data.email)
+  )
+
+  if current_user is None:
+    return JSONResponse(
+      content={"status": False, "message": "Invalid Session"},
+      status_code=status.HTTP_401_UNAUTHORIZED,
+    )
+
+  if target_user is None:
+    return JSONResponse(
+      content={"status": False, "message": "User not found"},
+      status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+  result = await Contact.create(owner=current_user, contact_user=target_user)
+
+  if result is not None:
+    return JSONResponse(
+      content={"status": True, "message": f"{data.email} is added to your contact"},
+      status_code=status.HTTP_201_CREATED,
+    )
+  else:
+    return JSONResponse(
+      content={
+        "status": False,
+        "message": "Unable to save to contact, Please try again later",
+      },
+      status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+    )
+
+
 @router.post("/ban")
-async def ban_user(user_id: str = Depends(authenticate.verify_jwt)):
-  pass
+async def ban_user(
+  data: contacts.ContactData, user_id: str = Depends(authenticate.verify_jwt)
+):
+  current_user, target_user = await asyncio.gather(
+    User.get_or_none(id=user_id), User.get_or_none(email=data.email)
+  )
+
+  if current_user is None:
+    return JSONResponse(
+      content={"status": False, "message": "Invalid Session"},
+      status_code=status.HTTP_401_UNAUTHORIZED,
+    )
+
+  if target_user is None:
+    return JSONResponse(
+      content={"status": False, "message": "User not found"},
+      status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+  response = await Contact.get_or_none(owner=current_user, contact_user=target_user)
+
+  if response is not None:
+    await response.delete()
+
+  return JSONResponse(
+    content={"status": True, "message": "Contact removed successfully"},
+    status_code=status.HTTP_200_OK,
+  )
 
 
 fcmRouter = APIRouter(prefix="/fcm", tags=["FCM"])
