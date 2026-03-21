@@ -32,5 +32,22 @@ public class CallActionReceiver extends BroadcastReceiver {
                 Log.d(TAG, "Unable to end call, C++ is dead");
             }
         }
+        else if ("ACCEPT_CALL".equals(action)) {
+            Log.d(TAG, "Call accepted from notification.");
+            nm.cancel(INCOMING_CALL_NOTIF_ID);
+
+            // Launch the main app Activity
+            Intent launchIntent = new Intent(context, MainActivity.class);
+            // These flags ensure the app comes to the foreground properly
+            launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            
+            // Pass the call details to the Activity
+            launchIntent.putExtra("action", "ACCEPT_CALL");
+            launchIntent.putExtra("room_id", intent.getStringExtra("room_id"));
+            launchIntent.putExtra("caller_email", intent.getStringExtra("caller_email"));
+            launchIntent.putExtra("caller_name", intent.getStringExtra("caller_name"));
+            
+            context.startActivity(launchIntent);
+        }
     }
 }
