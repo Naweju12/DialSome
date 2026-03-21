@@ -20,7 +20,7 @@ public class MainActivity extends QtActivity {
     }
 
     private void handleCallIntent(Intent intent) {
-        if (intent != null && "ACCEPT_CALL".equals(intent.getStringExtra("action"))) {
+        if (intent != null && "ACCEPT_CALL".equals(intent.getAction())) {
             String roomId = intent.getStringExtra("room_id");
             String email = intent.getStringExtra("caller_email");
             String name = intent.getStringExtra("caller_name");

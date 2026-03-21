@@ -40,9 +40,9 @@ public class CallActionReceiver extends BroadcastReceiver {
             Intent launchIntent = new Intent(context, MainActivity.class);
             // These flags ensure the app comes to the foreground properly
             launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            launchIntent.setAction("ACCEPT_CALL");
             
             // Pass the call details to the Activity
-            launchIntent.putExtra("action", "ACCEPT_CALL");
             launchIntent.putExtra("room_id", intent.getStringExtra("room_id"));
             launchIntent.putExtra("caller_email", intent.getStringExtra("caller_email"));
             launchIntent.putExtra("caller_name", intent.getStringExtra("caller_name"));
