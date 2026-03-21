@@ -77,7 +77,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         acceptIntent.putExtra("room_id", roomId);
         acceptIntent.putExtra("caller_email", callerEmail);
         acceptIntent.putExtra("caller_name", roomName);
-        acceptIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        acceptIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
         PendingIntent acceptPending = PendingIntent.getActivity(
             this, 10, acceptIntent, 

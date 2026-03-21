@@ -29,8 +29,8 @@ public class AndroidUtils {
         if (context instanceof android.app.Activity) {
             android.app.Activity activity = (android.app.Activity) context;
             android.content.Intent intent = activity.getIntent();
-            if (intent != null && intent.hasExtra("incoming_room_id")) {
-                return intent.getStringExtra("incoming_room_id");
+            if (intent != null && intent.hasExtra("room_id")) {
+                return intent.getStringExtra("room_id");
             }
         }
         return "";
@@ -40,8 +40,8 @@ public class AndroidUtils {
         if (context instanceof android.app.Activity) {
             android.app.Activity activity = (android.app.Activity) context;
             android.content.Intent intent = activity.getIntent();
-            if (intent != null && intent.hasExtra("incoming_room_name")) {
-                return intent.getStringExtra("incoming_room_name");
+            if (intent != null && intent.hasExtra("caller_name")) {
+                return intent.getStringExtra("caller_name");
             }
         }
         return "";
@@ -51,8 +51,8 @@ public class AndroidUtils {
         if (context instanceof android.app.Activity) {
             android.app.Activity activity = (android.app.Activity) context;
             android.content.Intent intent = activity.getIntent();
-            if (intent != null && intent.hasExtra("incoming_caller")) {
-                return intent.getStringExtra("incoming_caller");
+            if (intent != null && intent.hasExtra("caller_email")) {
+                return intent.getStringExtra("caller_email");
             }
         }
         return "";

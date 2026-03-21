@@ -17,6 +17,9 @@ public class CallActionReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
+        Intent serviceIntent = new Intent(context, CallForegroundService.class);
+        context.stopService(serviceIntent);
+
         // Only handle REJECT_CALL here
         if ("REJECT_CALL".equals(action)) {
             Log.d(TAG, "Call rejected from notification.");
