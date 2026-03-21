@@ -124,9 +124,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 .setContentText("Call from " + roomName)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
-                // Set the pending intents
-                .setFullScreenIntent(fullScreenPending, true) 
-                .setContentIntent(acceptPending) // Tapping the notification body accepts the call
+                .setContentIntent(fullScreenPending) // Tapping the notification body accepts the call
                 .setSound(ringtoneUri)
                 .setOngoing(true)
                 .setAutoCancel(true)
