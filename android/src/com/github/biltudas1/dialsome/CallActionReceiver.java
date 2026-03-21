@@ -17,36 +17,14 @@ public class CallActionReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 
-        if ("ACCEPT_CALL".equals(action)) {
-            // 1. Cancel the ringing notification
+        // Only handle REJECT_CALL here
+        if ("REJECT_CALL".equals(action)) {
+            Log.d(TAG, "Call rejected from notification.");
+            
+            // 1. Cancel notification
             nm.cancel(INCOMING_CALL_NOTIF_ID);
 
-            String roomId = intent.getStringExtra("room_id");
-            String email = intent.getStringExtra("caller_email");
-            String roomName = intent.getStringExtra("caller_name");
-
-            // 2. Bring the app to the foreground
-            Intent launchIntent = new Intent(context, org.qtproject.qt.android.bindings.QtActivity.class);
-            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-            launchIntent.putExtra("incoming_room_id", roomId);
-            launchIntent.putExtra("incoming_caller", email);
-            launchIntent.putExtra("incoming_room_name", roomName);
-            context.startActivity(launchIntent);
-
-            // 3. Tell C++ to join the call
-            try {
-                // We instantiate the service just to access the JNI methods without breaking your C++ signatures
-                MyFirebaseMessagingService fcm = new MyFirebaseMessagingService();
-                fcm.onCallMessageReceive(roomId, email, roomName);
-            } catch (UnsatisfiedLinkError e) {
-                Log.d(TAG, "C++ is currently dead, state will be restored when Activity launches.");
-            }
-
-        } else if ("REJECT_CALL".equals(action)) {
-            // Cancel notification
-            nm.cancel(INCOMING_CALL_NOTIF_ID);
-
-            // Tell C++ to end/reject the call silently in the background
+            // 2. Tell C++ to end the call silently
             try {
                 MyFirebaseMessagingService fcm = new MyFirebaseMessagingService();
                 fcm.onCallMessageEnd(intent.getStringExtra("caller_email"));

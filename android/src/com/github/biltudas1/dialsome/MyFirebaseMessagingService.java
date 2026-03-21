@@ -72,18 +72,26 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         String channelId = "IncomingCalls";
 
         // Create Intent for the "Accept" action
-        Intent acceptIntent = new Intent(this, CallActionReceiver.class);
+        Intent acceptIntent = new Intent(this, MainActivity.class);
         acceptIntent.setAction("ACCEPT_CALL");
         acceptIntent.putExtra("room_id", roomId);
         acceptIntent.putExtra("caller_email", callerEmail);
         acceptIntent.putExtra("caller_name", roomName);
-        PendingIntent acceptPending = PendingIntent.getBroadcast(this, 10, acceptIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        acceptIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent acceptPending = PendingIntent.getActivity(
+            this, 10, acceptIntent, 
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         // Create Intent for the "Reject" action
         Intent rejectIntent = new Intent(this, CallActionReceiver.class);
         rejectIntent.setAction("REJECT_CALL");
         rejectIntent.putExtra("caller_email", callerEmail);
-        PendingIntent rejectPending = PendingIntent.getBroadcast(this, 11, rejectIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent rejectPending = PendingIntent.getBroadcast(
+            this, 11, rejectIntent, 
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
 
         Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
 
