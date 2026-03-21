@@ -243,6 +243,21 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDi
         s_instance->endCall();
     }, Qt::QueuedConnection);
 }
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_acceptCallNative(
+    JNIEnv* env, jobject, jstring roomId, jstring email, jstring name) {
+    
+    if (!s_instance) return;
+
+    QString rId = QJniObject(roomId).toString();
+    QString mail = QJniObject(email).toString();
+    QString n = QJniObject(name).toString();
+
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        qDebug() << "User pressed ACCEPT on notification. Joining call now...";
+        s_instance->joinCall(rId, mail, n);
+    }, Qt::QueuedConnection);
+}
 }
 
 void Backend::startCall(const QString &email) {
@@ -408,7 +423,7 @@ void Backend::Startup() {
         qDebug() << "Starting the call";
         this->setMessage("Incoming call from " + email);
         this->saveToHistory(email, roomName, true);
-        this->joinCall(roomId, email, roomName);
+        // this->joinCall(roomId, email, roomName);
     });
 
     connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {

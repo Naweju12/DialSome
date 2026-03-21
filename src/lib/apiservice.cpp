@@ -6,123 +6,139 @@ APIService::APIService(QPointer<Settings> settings, QPointer<SecureStorage> stor
 }
 
 void APIService::update_fcm(QString fcm_token, QString accessToken) {
-    bool triedRefreshing = false;
-    connect(this, &APIService::tokenRefreshed, this, [this, triedRefreshing, fcm_token](QString accessToken, QString refreshToken) {
-        QString host = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::FCM::updateDevice;
-        QUrl hostUrl(host);
+    QString host = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::FCM::updateDevice;
+    QUrl hostUrl(host);
+    
+    // Helper lambda to construct and send the request
+    auto sendReq = [this, fcm_token, hostUrl](QString token) {
         QNetworkRequest request(hostUrl);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        request.setRawHeader("Authorization", "Bearer " + accessToken.toUtf8());
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
 
         QJsonObject json;
         json["fcm_token"] = fcm_token;
+        return this->m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
+    };
+
+    QNetworkReply *reply = sendReq(accessToken);
     
-        QNetworkReply *reply = this->m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
-        connect(reply, &QNetworkReply::finished, this, [this, reply, host, triedRefreshing]() mutable {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            if (reply->error() == QNetworkReply::NoError) {
-                qDebug() << "FCM Token Updated";
-            } else if (statusCode == 401) {
-                if (!triedRefreshing) {
-                    qDebug() << "Unauthorized! Refreshing Access Token...";
-                    triedRefreshing = true;
-                    this->refreshToken();
-                } else {
-                    emit this->invalidSession(); 
-                }
-            }
-            reply->deleteLater();
-        });
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq]() {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (reply->error() == QNetworkReply::NoError) {
+            qDebug() << "FCM Token Updated";
+        } else if (statusCode == 401) {
+            qDebug() << "Unauthorized! Refreshing Access Token for FCM Update...";
+            
+            // SingleShot connection for successful refresh
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply]() {
+                    int retryCode = retryReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                    if (retryReply->error() == QNetworkReply::NoError) {
+                        qDebug() << "FCM Token Updated (Retry)";
+                    } else if (retryCode == 401) {
+                        emit this->invalidSession();
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            // SingleShot connection for failed refresh
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "FCM Token Update Failed during refresh:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
     });
-    connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
-        qDebug() << "FCM Token Update Failed:" << error;
-        emit this->invalidSession();
-    });
-    emit this->tokenRefreshed(accessToken, this->m_storage->getRefreshToken());
 }
 
 void APIService::get_room(QString email, QString accessToken) {
-    bool triedRefreshing = false;
-    connect(this, &APIService::tokenRefreshed, this, [this, triedRefreshing, email](QString accessToken, QString refreshToken) {
-        QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Voice::call;
-        QUrl url(hostUrl);
+    QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Voice::call;
+    QUrl url(hostUrl);
+    
+    // Helper lambda to construct and send the request
+    auto sendReq = [this, email, url](QString token) {
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        request.setRawHeader("Authorization", "Bearer " + accessToken.toUtf8());
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
 
         QJsonObject json;
         json["email"] = email;
+        return m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
+    };
 
-        QNetworkReply *reply = m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
-        connect(reply, &QNetworkReply::finished, this, [reply, this, triedRefreshing]() mutable {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            if (statusCode == 401) {
-                if (!triedRefreshing) {
-                    qDebug() << "Unauthorized! Refreshing Access Token...";
-                    triedRefreshing = true;
-                    this->refreshToken();
-                } else {
-                    emit this->invalidSession(); 
-                }
-                reply->deleteLater();
-                return;
-            }
+    // Helper lambda to parse the response
+    auto handleResponse = [this](QNetworkReply *reply) -> bool {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode == 401) {
+            return false; // False indicates we need to refresh and retry
+        }
 
-            if (reply->error() != QNetworkReply::NoError) {
-                qDebug() << "Failed to retrieve RoomID:" << reply->errorString();
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Failed to retrieve RoomID:" << reply->errorString();
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            QByteArray responseData = reply->readAll();
+        QByteArray responseData = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
 
-            QJsonParseError parseError;
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !jsonDoc.isObject()) {
+            qDebug() << "JSON Parse Error:" << parseError.errorString();
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            if (parseError.error != QJsonParseError::NoError || !jsonDoc.isObject()) {
-                qDebug() << "JSON Parse Error:" << parseError.errorString();
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
+        QJsonObject jsonObj = jsonDoc.object();
+        if (!jsonObj.contains("data")) {
+            qDebug() << "JSON doesn't contains `data` key";
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            QJsonObject jsonObj = jsonDoc.object();
+        QJsonObject dataJson = jsonObj.value("data").toObject();
+        if (!dataJson.contains("room_id") || !dataJson.contains("room_name")) {
+            qDebug() << "Missing `room_id` or `room_name` keys";
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            if (!jsonObj.contains("data")) {
-                qDebug() << "JSON doesn't contains `data` key";
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
-            QJsonObject dataJson = jsonObj.value("data").toObject();
+        QString roomId = dataJson.value("room_id").toString();
+        QString roomName = dataJson.value("room_name").toString();
+        emit this->roomFetched(roomId, roomName);
+        return true; // True indicates the request has been fully processed
+    };
 
-            if (!dataJson.contains("room_id")) {
-                qDebug() << "No `room_id` key found";
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
-
-            if (!dataJson.contains("room_name")) {
-                qDebug() << "No `room_name` key found";
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
-
-            QString roomId = dataJson.value("room_id").toString();
-            QString roomName = dataJson.value("room_name").toString();
-            emit this->roomFetched(roomId, roomName);
-        
-            reply->deleteLater();
-        });
+    QNetworkReply *reply = sendReq(accessToken);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq, handleResponse]() {
+        bool done = handleResponse(reply);
+        if (!done) {
+            qDebug() << "Unauthorized! Refreshing Access Token for Room Fetch...";
+            
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq, handleResponse](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply, handleResponse]() {
+                    bool retryDone = handleResponse(retryReply);
+                    if (!retryDone) {
+                        emit this->invalidSession(); // Failed 401 again
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "Fetching Room Details Failed:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
     });
-    connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
-        qDebug() << "Fetching Room Details Failed:" << error;
-        emit this->invalidSession();
-    });
-    emit this->tokenRefreshed(accessToken, this->m_storage->getRefreshToken());
 }
 
 void APIService::refreshToken() {
@@ -175,70 +191,82 @@ void APIService::refreshToken() {
 }
 
 void APIService::end_call(QString email, QString accessToken) {
-    bool triedRefreshing = false;
-    connect(this, &APIService::tokenRefreshed, this, [this, triedRefreshing, email](QString accessToken, QString refreshToken) {
-        QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Voice::endCall;
-        QUrl url(hostUrl);
+    QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Voice::endCall;
+    QUrl url(hostUrl);
+    
+    // Helper lambda to construct and send the request
+    auto sendReq = [this, email, url](QString token) {
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        request.setRawHeader("Authorization", "Bearer " + accessToken.toUtf8());
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
 
         QJsonObject json;
         json["email"] = email;
+        return m_networkManager.sendCustomRequest(request, "DELETE", QJsonDocument(json).toJson(QJsonDocument::Compact));
+    };
 
-        QNetworkReply *reply = m_networkManager.sendCustomRequest(request, "DELETE", QJsonDocument(json).toJson(QJsonDocument::Compact));
-        connect(reply, &QNetworkReply::finished, this, [reply, this, triedRefreshing]() mutable {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            if (statusCode == 401) {
-                if (!triedRefreshing) {
-                    qDebug() << "Unauthorized! Refreshing Access Token...";
-                    triedRefreshing = true;
-                    this->refreshToken();
-                } else {
-                    emit this->invalidSession(); 
-                }
-                reply->deleteLater();
-                return;
-            }
+    // Helper lambda to parse the response
+    auto handleResponse = [this](QNetworkReply *reply) -> bool {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        if (statusCode == 401) {
+            return false; // Requires retry
+        }
 
-            if (reply->error() != QNetworkReply::NoError) {
-                qDebug() << "Failed to process ending call request:" << reply->errorString();
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Failed to process ending call request:" << reply->errorString();
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            QByteArray responseData = reply->readAll();
+        QByteArray responseData = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
 
-            QJsonParseError parseError;
-            QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
+        if (parseError.error != QJsonParseError::NoError || !jsonDoc.isObject()) {
+            qDebug() << "JSON Parse Error:" << parseError.errorString();
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            if (parseError.error != QJsonParseError::NoError || !jsonDoc.isObject()) {
-                qDebug() << "JSON Parse Error:" << parseError.errorString();
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
+        QJsonObject jsonObj = jsonDoc.object();
+        if (!jsonObj.contains("status")) {
+            qDebug() << "JSON doesn't contains `status` key";
+            emit this->roomFetchError("Failed to connect to the server");
+            return true;
+        }
 
-            QJsonObject jsonObj = jsonDoc.object();
-            if (!jsonObj.contains("status")) {
-                qDebug() << "JSON doesn't contains `status` key";
-                emit this->roomFetchError("Failed to connect to the server");
-                reply->deleteLater();
-                return;
-            }
+        if (jsonObj.value("status").toBool()) {
+            emit this->endCallSuccess();
+        } else {
+            emit this->endCallFailed();
+        }
+        return true;
+    };
 
-            if (jsonObj.value("status").toBool()) {
-                emit this->endCallSuccess();
-            } else {
-                emit this->endCallFailed();
-            }
-            reply->deleteLater();
-        });
+    QNetworkReply *reply = sendReq(accessToken);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq, handleResponse]() {
+        bool done = handleResponse(reply);
+        if (!done) {
+            qDebug() << "Unauthorized! Refreshing Access Token for End Call...";
+            
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq, handleResponse](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply, handleResponse]() {
+                    bool retryDone = handleResponse(retryReply);
+                    if (!retryDone) {
+                        emit this->invalidSession(); // Failed 401 again
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "Sending call termination request Failed:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
     });
-    connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
-        qDebug() << "Sending call termination request Failed:" << error;
-        emit this->invalidSession();
-    });
-    emit this->tokenRefreshed(accessToken, this->m_storage->getRefreshToken());
 }
