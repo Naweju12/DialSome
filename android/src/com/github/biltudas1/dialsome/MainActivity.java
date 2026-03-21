@@ -30,9 +30,9 @@ public class MainActivity extends QtActivity {
             }
 
             // 2. Extract call details
-            String roomId = intent.getStringExtra("incoming_room_id");
-            String email = intent.getStringExtra("incoming_caller");
-            String roomName = intent.getStringExtra("incoming_room_name");
+            String roomId = intent.getStringExtra("room_id");
+            String email = intent.getStringExtra("caller_email");
+            String roomName = intent.getStringExtra("caller_name");
 
             // 3. Send to C++ via your existing JNI function
             try {
