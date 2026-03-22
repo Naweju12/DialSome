@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
-from models.user import User
+from models import User, Contact
 import uuid_utils as uuid
 from models import voice
 from middlewares import authenticate
@@ -50,12 +50,25 @@ async def call_person(
       status_code=status.HTTP_404_NOT_FOUND,
     )
 
+  is_permitted = await Contact.filter(
+    owner_id=target_user.id, contact_user_id=current_user.id
+  ).exists()
+
+  if not is_permitted:
+    return JSONResponse(
+      content={
+        "status": False,
+        "message": "User privacy settings do not allow calls from non-contacts",
+      },
+      status_code=status.HTTP_403_FORBIDDEN,
+    )
+
   room_id = str(uuid.uuid7())
   payload = {
     "type": "incoming_call",
     "room_id": room_id,
     "caller_email": current_user.email,
-    "caller_name": current_user.firstname
+    "caller_name": current_user.firstname,
   }
   await fcm.send_fcm_notification(target_user.fcm_token, payload)
   return JSONResponse(

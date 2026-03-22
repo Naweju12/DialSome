@@ -270,3 +270,168 @@ void APIService::end_call(QString email, QString accessToken) {
         reply->deleteLater();
     });
 }
+
+void APIService::fetch_contacts(QString accessToken) {
+    QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Contact::contactList;
+    QUrl url(hostUrl);
+
+    // Helper lambda to construct and send the GET request
+    auto sendReq = [this, url](QString token) {
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
+
+        // Using GET since the body doesn't receive anything
+        return m_networkManager.get(request);
+    };
+
+    // Helper lambda to parse the response
+    auto handleResponse = [this](QNetworkReply *reply) -> bool {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        
+        // 401 triggers the token refresh logic
+        if (statusCode == 401) {
+            return false; 
+        }
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qDebug() << "Failed to retrieve contacts:" << reply->errorString();
+            emit this->contactsFetchError("Failed to connect to the server");
+            return true;
+        }
+
+        QByteArray responseData = reply->readAll();
+        QJsonParseError parseError;
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
+
+        if (parseError.error != QJsonParseError::NoError || !jsonDoc.isObject()) {
+            qDebug() << "JSON Parse Error:" << parseError.errorString();
+            emit this->contactsFetchError("Failed to parse server response");
+            return true;
+        }
+
+        QJsonObject jsonObj = jsonDoc.object();
+        
+        // Check for success status and ensure 'data' is an array
+        if (!jsonObj.value("status").toBool() || !jsonObj.contains("data") || !jsonObj.value("data").isArray()) {
+            qDebug() << "JSON doesn't contain a valid `data` array or status is false";
+            QString errorMsg = jsonObj.contains("message") ? jsonObj.value("message").toString() : "Invalid data format from server";
+            emit this->contactsFetchError(errorMsg);
+            return true;
+        }
+
+        QJsonArray dataArray = jsonObj.value("data").toArray();
+        QVariantList contactsList;
+
+        // Extract name and email from each object in the array
+        for (const QJsonValue &value : dataArray) {
+            if (value.isObject()) {
+                QJsonObject contactObj = value.toObject();
+                QVariantMap contactMap;
+                contactMap["name"] = contactObj.value("name").toString();
+                contactMap["email"] = contactObj.value("email").toString();
+                contactsList.append(contactMap);
+            }
+        }
+
+        // Emit the successfully mapped data to the UI/Backend
+        emit this->contactsFetched(contactsList);
+        return true; // True indicates the request has been fully processed
+    };
+
+    QNetworkReply *reply = sendReq(accessToken);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq, handleResponse]() {
+        bool done = handleResponse(reply);
+        
+        // If not done, it means we hit a 401 and need to refresh the token
+        if (!done) {
+            qDebug() << "Unauthorized! Refreshing Access Token for Contacts Fetch...";
+            
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq, handleResponse](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply, handleResponse]() {
+                    bool retryDone = handleResponse(retryReply);
+                    if (!retryDone) {
+                        emit this->invalidSession(); // Failed 401 again after refresh
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "Fetching Contacts Failed during refresh:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
+    });
+}
+
+void APIService::add_contact(QString email, QString accessToken) {
+    QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Contact::addContact;
+    QUrl url(hostUrl);
+
+    // Helper lambda to construct and send the request
+    auto sendReq = [this, email, url](QString token) {
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
+
+        QJsonObject jsonBody;
+        jsonBody["email"] = email;
+        return this->m_networkManager.post(request, QJsonDocument(jsonBody).toJson(QJsonDocument::Compact));
+    };
+
+    // Helper lambda to parse the response
+    // Notice we pass 'tokenUsed' so we can fetch_contacts with the correct (potentially refreshed) token on success.
+    auto handleResponse = [this](QNetworkReply *reply, QString tokenUsed) -> bool {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        
+        if (statusCode == 401) {
+            return false; // Requires retry
+        }
+
+        if (reply->error() == QNetworkReply::NoError && (statusCode == 200 || statusCode == 201)) {
+            qDebug() << "Contact added successfully!";
+            this->fetch_contacts(tokenUsed);
+            return true;
+        } else {
+            qDebug() << "Failed to add contact:" << reply->errorString();
+            QByteArray responseData = reply->readAll();
+            qDebug() << "Error Response:" << responseData;
+            
+            emit this->contactsFetchError("Failed to add contact: " + reply->errorString());
+            return true;
+        }
+    };
+
+    QNetworkReply *reply = sendReq(accessToken);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq, handleResponse, accessToken]() {
+        bool done = handleResponse(reply, accessToken);
+        
+        if (!done) {
+            qDebug() << "Unauthorized! Refreshing Access Token for Add Contact...";
+            
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq, handleResponse](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply, handleResponse, newAccess]() {
+                    bool retryDone = handleResponse(retryReply, newAccess);
+                    if (!retryDone) {
+                        emit this->invalidSession(); // Failed 401 again
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "Adding Contact Failed during refresh:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
+    });
+}

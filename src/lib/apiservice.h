@@ -11,6 +11,7 @@
 #include <QPointer>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QJsonArray>
 #include "apiconstrains.h"
 #include "settings.h"
 #include "securestorage.h"
@@ -24,6 +25,8 @@ public:
     void refreshToken();
     void get_room(QString email, QString accessToken);
     void end_call(QString email, QString accessToken);
+    void fetch_contacts(QString accessToken);
+    void add_contact(QString email, QString accessToken);
 
 signals:
     void tokenRefreshed(QString accessToken, QString refreshToken);
@@ -33,6 +36,8 @@ signals:
     void roomFetched(QString roomId, QString roomName);
     void endCallSuccess();
     void endCallFailed();
+    void contactsFetched(QVariantList contacts);
+    void contactsFetchError(QString error);
 
 private:
     QPointer<Settings> m_settings;

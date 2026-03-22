@@ -18,4 +18,9 @@ namespace API {
   namespace FCM {
     const QString updateDevice = "/users/fcm/update";
   }
+
+  namespace Contact {
+    const QString contactList = "/users/contacts";
+    const QString addContact = "/users/add";
+  }
 }
