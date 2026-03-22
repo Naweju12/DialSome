@@ -46,6 +46,11 @@ ColumnLayout {
                 sourceSize.width: 30
                 sourceSize.height: 30
                 visible: optionsSection.selectedIndex === 2
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: addContactPopup.open()
+                }
             }
 
             Image {
@@ -296,5 +301,89 @@ ColumnLayout {
     // Push everything to the top
     Item {
         Layout.fillHeight: true
+    }
+
+    Popup {
+        id: addContactPopup
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: parent.height * 0.15
+        width: parent.width * 0.9
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside //
+
+        background: Rectangle {
+            color: "#2c3e50"
+            radius: 16
+            border.color: "#34495e"
+            border.width: 2
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 20 //
+
+            Text {
+                text: "Add New Contact"
+                color: "white"
+                font.bold: true
+                font.pixelSize: 20
+                Layout.alignment: Qt.AlignHCenter
+                bottomPadding: 5 //
+            }
+
+            TextField {
+                id: contactEmailInput
+                placeholderText: "Enter Email Address"
+                Layout.fillWidth: true //
+                color: "white"
+
+                background: Rectangle {
+                    implicitHeight: 48
+                    color: "#34495e"
+                    radius: 8
+                    border.color: contactEmailInput.activeFocus ? "#4CAF50" : "transparent" //
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Button {
+                    text: "Cancel"
+                    Layout.fillWidth: true
+                    flat: true
+                    onClicked: {
+                        contactEmailInput.text = "" // Clear the input
+                        addContactPopup.close() //
+                    }
+                }
+
+                Button {
+                    id: addBtn
+                    text: "Add"
+                    Layout.fillWidth: true
+                    highlighted: true
+
+                    // Button is only enabled if input is not empty
+                    enabled: contactEmailInput.text.trim().length > 0 //
+
+                    background: Rectangle {
+                        color: !addBtn.enabled ? "#555555" : (addBtn.pressed ? "#388E3C" : "#4CAF50") //
+                        radius: 8
+                        opacity: addBtn.enabled ? 1.0 : 0.5 //
+                    }
+
+                    onClicked: {
+                        // Call backend function
+                        myBackend.addContact(contactEmailInput.text.trim())
+
+                        contactEmailInput.text = "" // clear upon submit
+                        addContactPopup.close(); //
+                    }
+                }
+            }
+        }
     }
 }

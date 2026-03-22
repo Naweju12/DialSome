@@ -55,6 +55,7 @@ public:
     QVariantList recentCalls() const;
     void saveToHistory(const QString &email, const QString &name, bool isIncoming);
     QVariantList contacts() const;
+    Q_INVOKABLE void addContact(const QString &email);
 
 signals:
     void messageChanged();

@@ -26,6 +26,7 @@ public:
     void get_room(QString email, QString accessToken);
     void end_call(QString email, QString accessToken);
     void fetch_contacts(QString accessToken);
+    void add_contact(QString email, QString accessToken);
 
 signals:
     void tokenRefreshed(QString accessToken, QString refreshToken);

@@ -368,3 +368,70 @@ void APIService::fetch_contacts(QString accessToken) {
         reply->deleteLater();
     });
 }
+
+void APIService::add_contact(QString email, QString accessToken) {
+    QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Contact::addContact;
+    QUrl url(hostUrl);
+
+    // Helper lambda to construct and send the request
+    auto sendReq = [this, email, url](QString token) {
+        QNetworkRequest request(url);
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
+
+        QJsonObject jsonBody;
+        jsonBody["email"] = email;
+        return this->m_networkManager.post(request, QJsonDocument(jsonBody).toJson(QJsonDocument::Compact));
+    };
+
+    // Helper lambda to parse the response
+    // Notice we pass 'tokenUsed' so we can fetch_contacts with the correct (potentially refreshed) token on success.
+    auto handleResponse = [this](QNetworkReply *reply, QString tokenUsed) -> bool {
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        
+        if (statusCode == 401) {
+            return false; // Requires retry
+        }
+
+        if (reply->error() == QNetworkReply::NoError && (statusCode == 200 || statusCode == 201)) {
+            qDebug() << "Contact added successfully!";
+            this->fetch_contacts(tokenUsed);
+            return true;
+        } else {
+            qDebug() << "Failed to add contact:" << reply->errorString();
+            QByteArray responseData = reply->readAll();
+            qDebug() << "Error Response:" << responseData;
+            
+            emit this->contactsFetchError("Failed to add contact: " + reply->errorString());
+            return true;
+        }
+    };
+
+    QNetworkReply *reply = sendReq(accessToken);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, sendReq, handleResponse, accessToken]() {
+        bool done = handleResponse(reply, accessToken);
+        
+        if (!done) {
+            qDebug() << "Unauthorized! Refreshing Access Token for Add Contact...";
+            
+            connect(this, &APIService::tokenRefreshed, this, [this, sendReq, handleResponse](QString newAccess, QString) {
+                QNetworkReply *retryReply = sendReq(newAccess);
+                connect(retryReply, &QNetworkReply::finished, this, [this, retryReply, handleResponse, newAccess]() {
+                    bool retryDone = handleResponse(retryReply, newAccess);
+                    if (!retryDone) {
+                        emit this->invalidSession(); // Failed 401 again
+                    }
+                    retryReply->deleteLater();
+                });
+            }, Qt::SingleShotConnection);
+            
+            connect(this, &APIService::tokenRefreshError, this, [this](QString error) {
+                qDebug() << "Adding Contact Failed during refresh:" << error;
+                emit this->invalidSession();
+            }, Qt::SingleShotConnection);
+            
+            this->refreshToken();
+        }
+        reply->deleteLater();
+    });
+}

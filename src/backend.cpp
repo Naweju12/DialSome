@@ -550,3 +550,11 @@ QVariantList Backend::recentCalls() const {
 QVariantList Backend::contacts() const {
     return m_contacts;
 }
+
+void Backend::addContact(const QString &email) {
+    if (email.isEmpty()) return;
+
+    qDebug() << "Requesting to add contact:" << email;
+
+    this->m_api->add_contact(email, this->m_jwtAccessToken);
+}
