@@ -30,7 +30,7 @@ class Backend : public QObject {
     Q_PROPERTY(bool useHttps READ useHttps WRITE setUseHttps NOTIFY useHttpsChanged)
     Q_PROPERTY(bool useWss READ useWss WRITE setUseWss NOTIFY useWssChanged)
     Q_PROPERTY(QVariantList recentCalls READ recentCalls NOTIFY recentCallsChanged)
-
+    Q_PROPERTY(QVariantList contacts READ contacts NOTIFY contactsChanged)
 public:
     explicit Backend(QObject *parent = nullptr);
     QString message() const;
@@ -54,6 +54,7 @@ public:
     void setUseWss(bool value);
     QVariantList recentCalls() const;
     void saveToHistory(const QString &email, const QString &name, bool isIncoming);
+    QVariantList contacts() const;
 
 signals:
     void messageChanged();
@@ -70,6 +71,7 @@ signals:
     void useHttpsChanged();
     void useWssChanged();
     void recentCallsChanged();
+    void contactsChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -91,6 +93,7 @@ private:
     QString m_callerEmail = ""; // Email of the other party
     QString m_callerName = "User"; // Name of the other party
     QVariantList m_recentCalls;
+    QVariantList m_contacts;
 };
 
 #endif

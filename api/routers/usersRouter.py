@@ -176,6 +176,37 @@ async def ban_user(
   )
 
 
+@router.get("/contacts")
+async def get_contacts(user_id: str = Depends(authenticate.verify_jwt)):
+  current_user = await User.get_or_none(id=user_id)
+  if current_user is None:
+    return JSONResponse(
+      content={"status": False, "message": "Invalid Session"},
+      status_code=status.HTTP_401_UNAUTHORIZED,
+    )
+
+  data = []
+  async for item in Contact.filter(owner=current_user):
+    name = item.contact_user.firstname
+    if item.contact_user.lastname:
+      name += (" " + item.contact_user.lastname)
+    email = item.contact_user.email
+
+    data.append({
+      "name": name,
+      "email": email
+    })
+
+  return JSONResponse(
+    content={
+      "status": True,
+      "message": "Contact fetching successful",
+      "data": data
+    },
+    status_code=status.HTTP_200_OK
+  )
+
+
 fcmRouter = APIRouter(prefix="/fcm", tags=["FCM"])
 
 

@@ -41,6 +41,14 @@ ColumnLayout {
             }
 
             Image {
+                id: addContactBtn
+                source: "../icons/add.png"
+                sourceSize.width: 30
+                sourceSize.height: 30
+                visible: optionsSection.selectedIndex === 2
+            }
+
+            Image {
                 id: settingsBtn
                 source: "../icons/settings.png"
                 sourceSize.width: 20
@@ -232,6 +240,53 @@ ColumnLayout {
                 }
                 onClicked: {
                     // Re-dial the person directly from recents
+                    myBackend.startCall(modelData.email)
+                }
+            }
+        }
+
+        ListView {
+            id: contactsView
+            anchors.fill: parent
+            visible: optionsSection.selectedIndex === 2
+            model: myBackend.contacts
+            clip: true
+
+            delegate: ItemDelegate {
+                width: contactsView.width
+                height: 70
+
+                background: Rectangle {
+                    color: parent.pressed ? "#222" : "transparent"
+                }
+
+                contentItem: RowLayout {
+                    spacing: 15
+                    Rectangle {
+                        width: 45; height: 45; radius: 22.5; color: "#333"
+                        Image {
+                            source: "../icons/user.png"
+                            anchors.centerIn: parent
+                            sourceSize: Qt.size(45, 45)
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                        }
+                    }
+                    ColumnLayout {
+                        Text {
+                            text: modelData.name
+                            color: "white"
+                            font.bold: true
+                        }
+                        Text {
+                            text: modelData.email
+                            color: "#808080"
+                            font.pixelSize: 12
+                        }
+                    }
+                }
+                onClicked: {
+                    // Call the person directly from contacts
                     myBackend.startCall(modelData.email)
                 }
             }

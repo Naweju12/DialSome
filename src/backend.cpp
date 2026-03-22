@@ -35,6 +35,10 @@ Backend::Backend(QObject *parent) : QObject(parent) {
                 qDebug() << "Server Connected";
                 this->m_serverConnected = true;
                 emit this->serverConnectionChanged();
+
+                if (!this->m_storage->getRefreshToken().isEmpty()) {
+                    this->m_api->fetch_contacts(this->m_jwtAccessToken);
+                }
             } else {
                 qDebug() << "Server Disconnected";
             }
@@ -159,6 +163,15 @@ Backend::Backend(QObject *parent) : QObject(parent) {
             );
         }
         #endif
+    });
+
+    connect(m_api, &APIService::contactsFetched, this, [this](QVariantList contacts) {
+        m_contacts = contacts;
+        emit contactsChanged();
+    });
+
+    connect(m_api, &APIService::contactsFetchError, this, [this](QString error) {
+        qDebug() << "Failed to load contacts:" << error;
     });
 
     connect(&m_webSocket, &QWebSocket::connected, this, &Backend::onConnected);
@@ -532,4 +545,8 @@ void Backend::saveToHistory(const QString &email, const QString &name, bool isIn
 
 QVariantList Backend::recentCalls() const {
     return m_recentCalls;
+}
+
+QVariantList Backend::contacts() const {
+    return m_contacts;
 }
