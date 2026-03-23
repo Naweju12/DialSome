@@ -165,15 +165,6 @@ Backend::Backend(QObject *parent) : QObject(parent) {
         #endif
     });
 
-    connect(m_api, &APIService::contactsFetched, this, [this](QVariantList contacts) {
-        m_contacts = contacts;
-        emit contactsChanged();
-    });
-
-    connect(m_api, &APIService::contactsFetchError, this, [this](QString error) {
-        qDebug() << "Failed to load contacts:" << error;
-    });
-
     connect(&m_webSocket, &QWebSocket::connected, this, &Backend::onConnected);
     connect(&m_webSocket, &QWebSocket::textMessageReceived, this, &Backend::onTextMessageReceived);
 
@@ -415,6 +406,16 @@ void Backend::Startup() {
 
     this->m_api = new APIService(this->m_settings, this->m_storage, this);
     this->m_fcm = new FCMManager(this->m_storage, this);
+
+    // Updates the UI of Contacts
+    connect(m_api, &APIService::contactsFetched, this, [this](QVariantList contacts) {
+        m_contacts = contacts;
+        emit this->contactsChanged();
+    });
+
+    connect(m_api, &APIService::contactsFetchError, this, [this](QString error) {
+        qDebug() << "Failed to load contacts:" << error;
+    });
 
     // Updates the Refresh and Access Token
     connect(this->m_api, &APIService::tokenRefreshed, this, [this](QString accessToken, QString refreshToken) {

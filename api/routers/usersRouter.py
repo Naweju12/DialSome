@@ -186,7 +186,7 @@ async def get_contacts(user_id: str = Depends(authenticate.verify_jwt)):
     )
 
   data = []
-  async for item in Contact.filter(owner=current_user):
+  async for item in Contact.filter(owner=current_user).prefetch_related("contact_user"):
     name = item.contact_user.firstname
     if item.contact_user.lastname:
       name += (" " + item.contact_user.lastname)
@@ -196,6 +196,8 @@ async def get_contacts(user_id: str = Depends(authenticate.verify_jwt)):
       "name": name,
       "email": email
     })
+
+  logger.LOGGER.debug(data)
 
   return JSONResponse(
     content={

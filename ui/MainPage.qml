@@ -45,6 +45,8 @@ ColumnLayout {
                 source: "../icons/add.png"
                 sourceSize.width: 30
                 sourceSize.height: 30
+                Layout.preferredWidth: 30
+                Layout.preferredHeight: 30
                 visible: optionsSection.selectedIndex === 2
 
                 MouseArea {
