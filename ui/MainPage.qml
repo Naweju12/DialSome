@@ -234,12 +234,12 @@ ColumnLayout {
                     }
                     ColumnLayout {
                         Text {
-                            text: name
+                            text: modelData.name
                             color: "white"
                             font.bold: true
                         }
                         Text {
-                            text: (isIncoming ? "Incoming" : "Outgoing") + " • " + email
+                            text: (modelData.isIncoming ? "Incoming" : "Outgoing") + " • " + modelData.email
                             color: "#808080"
                             font.pixelSize: 12
                         }
@@ -281,12 +281,12 @@ ColumnLayout {
                     }
                     ColumnLayout {
                         Text {
-                            text: name
+                            text: modelData.name
                             color: "white"
                             font.bold: true
                         }
                         Text {
-                            text: email
+                            text: modelData.email
                             color: "#808080"
                             font.pixelSize: 12
                         }
