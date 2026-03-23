@@ -54,6 +54,7 @@ qt_add_qml_module(DialSome
         icons/user.png
         icons/settings.png
         icons/server.png
+        icons/add.png
 )
 
 qt_add_resources(DialSome "configs"
