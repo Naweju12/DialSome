@@ -167,41 +167,6 @@ Backend::Backend(QObject *parent) : QObject(parent) {
 
     connect(&m_webSocket, &QWebSocket::connected, this, &Backend::onConnected);
     connect(&m_webSocket, &QWebSocket::textMessageReceived, this, &Backend::onTextMessageReceived);
-
-    #ifdef Q_OS_ANDROID
-        QJniObject context = QNativeInterface::QAndroidApplication::context();
-        QJniObject roomIdJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingRoomId",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QJniObject roomNameJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingRoomName",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QJniObject emailJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingCallerEmail",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QString roomId = roomIdJni.toString();
-        QString roomName = roomNameJni.toString();
-        QString email = emailJni.toString();
-
-        if (!roomId.isEmpty()) {
-            qDebug() << "App was woken up for a call! Room:" << roomId;
-            saveToHistory(email, roomName, true);
-            // Optionally prompt the user, or immediately join:
-            joinCall(roomId, email, roomName);
-        }
-    #endif
 }
 
 extern "C" {
@@ -262,10 +227,25 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_acceptCal
         s_instance->joinCall(rId, mail, n);
     }, Qt::QueuedConnection);
 }
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_showIncomingCallNative(
+    JNIEnv* env, jobject, jstring roomId, jstring email, jstring name) {
+    
+    if (!s_instance) return;
+
+    QString rId = QJniObject(roomId).toString();
+    QString mail = QJniObject(email).toString();
+    QString n = QJniObject(name).toString();
+
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        qDebug() << "Woken up by Full Screen Intent. Showing UI...";
+        FCMManager::instance()->processIncomingSignal(rId, mail, n);
+    }, Qt::QueuedConnection);
+}
 }
 
 void Backend::startCall(const QString &email) {
-    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+    if (this->m_webrtc.isValid()) {
         qDebug() << "Call already in progress, ignoring startCall.";
         return;
     }
@@ -308,7 +288,7 @@ void Backend::startCall(const QString &email) {
 }
 
 void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
-    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+    if (this->m_webrtc.isValid()) {
         qDebug() << "Call already in progress, ignoring joinCall.";
         return;
     }
@@ -434,10 +414,16 @@ void Backend::Startup() {
     });
 
     connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
-        qDebug() << "Starting the call";
+        qDebug() << "Incoming call screen triggered";
         this->setMessage("Incoming call from " + email);
         this->saveToHistory(email, roomName, true);
-        // this->joinCall(roomId, email, roomName);
+        
+        // Store data and trigger the UI
+        this->m_incomingRoomId = roomId;
+        this->m_callerEmail = email;
+        this->m_callerName = roomName;
+        emit this->callerInfoChanged();
+        emit this->incomingCall();
     });
 
     connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
@@ -445,6 +431,14 @@ void Backend::Startup() {
     });
 
     emit this->settingsLoaded();
+
+    #ifdef Q_OS_ANDROID
+    qDebug() << "Notifying Android that Qt UI is fully loaded and ready.";
+    QJniObject::callStaticMethod<void>(
+        "com/github/biltudas1/dialsome/MainActivity",
+        "notifyQtReady"
+    );
+    #endif
 }
 
 bool Backend::serverConnected() const { return m_serverConnected; }
@@ -476,6 +470,19 @@ void Backend::endCall() {
     if (m_webSocket.isValid()) {
         m_webSocket.close();
     }
+
+    // Clear the Android notification in case they hit "Reject" on the QML UI
+    #ifdef Q_OS_ANDROID
+    QJniObject context = QNativeInterface::QAndroidApplication::context();
+    if (context.isValid()) {
+        QJniObject::callStaticMethod<void>(
+            "com/github/biltudas1/dialsome/MainActivity",
+            "clearCallNotification",
+            "(Landroid/content/Context;)V",
+            context.object()
+        );
+    }
+    #endif
 
     this->m_callerEmail = ""; 
     this->m_callerName = "";
@@ -558,4 +565,25 @@ void Backend::addContact(const QString &email) {
     qDebug() << "Requesting to add contact:" << email;
 
     this->m_api->add_contact(email, this->m_jwtAccessToken);
+}
+
+void Backend::acceptCall() {
+    if (!m_incomingRoomId.isEmpty()) {
+        // Join the WebRTC room now that the user has accepted
+        joinCall(m_incomingRoomId, m_callerEmail, m_callerName);
+        m_incomingRoomId.clear();
+
+        // Clear the Android notification to stop the ringtone
+        #ifdef Q_OS_ANDROID
+        QJniObject context = QNativeInterface::QAndroidApplication::context();
+        if (context.isValid()) {
+            QJniObject::callStaticMethod<void>(
+                "com/github/biltudas1/dialsome/MainActivity",
+                "clearCallNotification",
+                "(Landroid/content/Context;)V",
+                context.object()
+            );
+        }
+        #endif
+    }
 }

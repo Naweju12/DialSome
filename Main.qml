@@ -49,6 +49,11 @@ ApplicationWindow {
     }
 
     Component {
+        id: incomingCallPageComponent
+        IncomingCallPage {}
+    }
+
+    Component {
         id: settingsPageComponent
         SettingsPage {}
     }
@@ -67,7 +72,10 @@ ApplicationWindow {
             mainStack.replace(loginPageComponent)
         }
         function onStartingCall() {
-            mainStack.push(callingPageComponent)
+            mainStack.replace(callingPageComponent)
+        }
+        function onIncomingCall() {
+            mainStack.push(incomingCallPageComponent)
         }
         function onCallEnded() {
             mainStack.pop()
