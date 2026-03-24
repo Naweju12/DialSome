@@ -467,6 +467,14 @@ void Backend::Startup() {
     });
 
     emit this->settingsLoaded();
+
+    #ifdef Q_OS_ANDROID
+    qDebug() << "Notifying Android that Qt UI is fully loaded and ready.";
+    QJniObject::callStaticMethod<void>(
+        "com/github/biltudas1/dialsome/MainActivity",
+        "notifyQtReady"
+    );
+    #endif
 }
 
 bool Backend::serverConnected() const { return m_serverConnected; }

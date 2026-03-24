@@ -11,12 +11,16 @@ import org.qtproject.qt.android.bindings.QtActivity;
 public class MainActivity extends QtActivity {
 
     private static final int INCOMING_CALL_NOTIF_ID = 1001;
+    
+    private static MainActivity instance;
+    private static boolean isQtReady = false;
+    private Intent cachedIntent = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this; // Save instance reference
 
-        // Allow the app UI to wake the screen and display over the lock screen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
@@ -25,14 +29,29 @@ public class MainActivity extends QtActivity {
                                  WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
 
-        handleCallIntent(getIntent());
+        // Cache the intent instead of executing it immediately
+        cachedIntent = getIntent();
     }
 
     @Override
     public void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        handleCallIntent(intent);
+        if (isQtReady) {
+            handleCallIntent(intent); // Execute immediately if Qt is running
+        } else {
+            cachedIntent = intent;
+        }
+    }
+
+    public static void notifyQtReady() {
+        isQtReady = true;
+        if (instance != null && instance.cachedIntent != null) {
+            instance.runOnUiThread(() -> {
+                instance.handleCallIntent(instance.cachedIntent);
+                instance.cachedIntent = null; // Clear after handling
+            });
+        }
     }
 
     private void handleCallIntent(Intent intent) {
@@ -43,7 +62,6 @@ public class MainActivity extends QtActivity {
             String name = intent.getStringExtra("caller_name");
 
             if ("ACCEPT_CALL".equals(action)) {
-                // User pressed accept on the notification drop-down
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (nm != null) nm.cancel(INCOMING_CALL_NOTIF_ID);
 
@@ -51,7 +69,6 @@ public class MainActivity extends QtActivity {
                     acceptCallNative(roomId, email, name != null ? name : "Unknown");
                 }
             } else if ("SHOW_INCOMING_CALL".equals(action)) {
-                // The lock screen was bypassed. Tell C++ to show the IncomingCallPage.qml
                 if (roomId != null && email != null) {
                     showIncomingCallNative(roomId, email, name != null ? name : "Unknown");
                 }
@@ -59,7 +76,6 @@ public class MainActivity extends QtActivity {
         }
     }
 
-    // Declare the native C++ function
     private native void acceptCallNative(String roomId, String email, String name);
     private native void showIncomingCallNative(String roomId, String email, String name);
 }
