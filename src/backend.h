@@ -31,6 +31,7 @@ class Backend : public QObject {
     Q_PROPERTY(bool useWss READ useWss WRITE setUseWss NOTIFY useWssChanged)
     Q_PROPERTY(QVariantList recentCalls READ recentCalls NOTIFY recentCallsChanged)
     Q_PROPERTY(QVariantList contacts READ contacts NOTIFY contactsChanged)
+    Q_PROPERTY(bool speakerOn READ speakerOn WRITE setSpeakerOn NOTIFY speakerOnChanged)
 public:
     explicit Backend(QObject *parent = nullptr);
     QString message() const;
@@ -57,6 +58,8 @@ public:
     QVariantList contacts() const;
     Q_INVOKABLE void addContact(const QString &email);
     Q_INVOKABLE void acceptCall();
+    bool speakerOn() const;
+    Q_INVOKABLE void setSpeakerOn(bool on);
 
 signals:
     void messageChanged();
@@ -75,6 +78,7 @@ signals:
     void recentCallsChanged();
     void contactsChanged();
     void incomingCall();
+    void speakerOnChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -98,6 +102,7 @@ private:
     QString m_incomingRoomId = "";
     QVariantList m_recentCalls;
     QVariantList m_contacts;
+    bool m_speakerOn = false;
 };
 
 #endif

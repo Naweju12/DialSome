@@ -52,31 +52,63 @@ ColumnLayout {
         Layout.fillHeight: true
     }
 
-    Rectangle {
-        id: endCallBtn
-        color: "red"
-        height: 60
-        width: height
-        radius: height / 2
-        Layout.bottomMargin: 25
+    RowLayout {
         Layout.alignment: Qt.AlignHCenter
+        Layout.bottomMargin: 25
+        spacing: 40
 
-        Image {
-            source: "../icons/dial.png"
-            sourceSize.width: 35
-            sourceSize.height: 35
-            anchors.centerIn: parent
-            rotation: 135
+        // Speaker Toggle Button
+        Rectangle {
+            id: speakerBtn
+            color: myBackend.speakerOn ? "#FFFFFF" : "#4A4A4A"
+            height: 60
+            width: height
+            radius: height / 2
 
-            fillMode: Image.PreserveAspectFit
-            smooth: true
-            mipmap: true
+            Image {
+                // Dynamically change the icon based on the state
+                source: myBackend.speakerOn ? "../icons/volume_on.png" : "../icons/volume_off.png"
+                sourceSize.width: 30
+                sourceSize.height: 30
+                anchors.centerIn: parent
+
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    myBackend.setSpeakerOn(!myBackend.speakerOn);
+                }
+            }
         }
 
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                myBackend.endCall();
+        // End Call Button
+        Rectangle {
+            id: endCallBtn
+            color: "red"
+            height: 60
+            width: height
+            radius: height / 2
+
+            Image {
+                source: "../icons/dial.png"
+                sourceSize.width: 35
+                sourceSize.height: 35
+                anchors.centerIn: parent
+                rotation: 135
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    myBackend.endCall();
+                }
             }
         }
     }
