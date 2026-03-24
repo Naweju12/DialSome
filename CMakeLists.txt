@@ -38,6 +38,7 @@ qt_add_qml_module(DialSome
         Main.qml
         ui/LoginPage.qml
         ui/MainPage.qml
+        ui/IncomingCallPage.qml
         ui/CallingPage.qml
         ui/SettingsPage.qml
     SOURCES

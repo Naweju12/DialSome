@@ -36,26 +36,30 @@ public class MainActivity extends QtActivity {
     }
 
     private void handleCallIntent(Intent intent) {
-        if (intent != null && "ACCEPT_CALL".equals(intent.getAction())) {
-            
-            // 1. KILL THE RINGTONE AND NOTIFICATION INSTANTLY
-            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (nm != null) {
-                nm.cancel(INCOMING_CALL_NOTIF_ID);
-            }
-
-            // 2. Extract Data
+        if (intent != null && intent.getAction() != null) {
+            String action = intent.getAction();
             String roomId = intent.getStringExtra("room_id");
             String email = intent.getStringExtra("caller_email");
             String name = intent.getStringExtra("caller_name");
-            
-            // 3. Send the signal to C++ to join the call
-            if (roomId != null && email != null) {
-                acceptCallNative(roomId, email, name != null ? name : "Unknown");
+
+            if ("ACCEPT_CALL".equals(action)) {
+                // User pressed accept on the notification drop-down
+                NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                if (nm != null) nm.cancel(INCOMING_CALL_NOTIF_ID);
+
+                if (roomId != null && email != null) {
+                    acceptCallNative(roomId, email, name != null ? name : "Unknown");
+                }
+            } else if ("SHOW_INCOMING_CALL".equals(action)) {
+                // The lock screen was bypassed. Tell C++ to show the IncomingCallPage.qml
+                if (roomId != null && email != null) {
+                    showIncomingCallNative(roomId, email, name != null ? name : "Unknown");
+                }
             }
         }
     }
 
     // Declare the native C++ function
     private native void acceptCallNative(String roomId, String email, String name);
+    private native void showIncomingCallNative(String roomId, String email, String name);
 }

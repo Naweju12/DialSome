@@ -56,6 +56,7 @@ public:
     void saveToHistory(const QString &email, const QString &name, bool isIncoming);
     QVariantList contacts() const;
     Q_INVOKABLE void addContact(const QString &email);
+    Q_INVOKABLE void acceptCall();
 
 signals:
     void messageChanged();
@@ -73,6 +74,7 @@ signals:
     void useWssChanged();
     void recentCallsChanged();
     void contactsChanged();
+    void incomingCall();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -93,6 +95,7 @@ private:
     bool m_isCaller = false;
     QString m_callerEmail = ""; // Email of the other party
     QString m_callerName = "User"; // Name of the other party
+    QString m_incomingRoomId = "";
     QVariantList m_recentCalls;
     QVariantList m_contacts;
 };

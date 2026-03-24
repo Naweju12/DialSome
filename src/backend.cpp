@@ -199,7 +199,8 @@ Backend::Backend(QObject *parent) : QObject(parent) {
             qDebug() << "App was woken up for a call! Room:" << roomId;
             saveToHistory(email, roomName, true);
             // Optionally prompt the user, or immediately join:
-            joinCall(roomId, email, roomName);
+            // joinCall(roomId, email, roomName);
+            FCMManager::instance()->processIncomingSignal(roomId, email, roomName);
         }
     #endif
 }
@@ -260,6 +261,21 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_acceptCal
     QMetaObject::invokeMethod(s_instance, [=]() {
         qDebug() << "User pressed ACCEPT on notification. Joining call now...";
         s_instance->joinCall(rId, mail, n);
+    }, Qt::QueuedConnection);
+}
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_showIncomingCallNative(
+    JNIEnv* env, jobject, jstring roomId, jstring email, jstring name) {
+    
+    if (!s_instance) return;
+
+    QString rId = QJniObject(roomId).toString();
+    QString mail = QJniObject(email).toString();
+    QString n = QJniObject(name).toString();
+
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        qDebug() << "Woken up by Full Screen Intent. Showing UI...";
+        FCMManager::instance()->processIncomingSignal(rId, mail, n);
     }, Qt::QueuedConnection);
 }
 }
@@ -434,10 +450,16 @@ void Backend::Startup() {
     });
 
     connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
-        qDebug() << "Starting the call";
+        qDebug() << "Incoming call screen triggered";
         this->setMessage("Incoming call from " + email);
         this->saveToHistory(email, roomName, true);
-        // this->joinCall(roomId, email, roomName);
+        
+        // Store data and trigger the UI
+        this->m_incomingRoomId = roomId;
+        this->m_callerEmail = email;
+        this->m_callerName = roomName;
+        emit this->callerInfoChanged();
+        emit this->incomingCall();
     });
 
     connect(this->m_fcm, &FCMManager::callEndingSignal, this, [this]() {
@@ -558,4 +580,12 @@ void Backend::addContact(const QString &email) {
     qDebug() << "Requesting to add contact:" << email;
 
     this->m_api->add_contact(email, this->m_jwtAccessToken);
+}
+
+void Backend::acceptCall() {
+    if (!m_incomingRoomId.isEmpty()) {
+        // Join the WebRTC room now that the user has accepted
+        joinCall(m_incomingRoomId, m_callerEmail, m_callerName);
+        m_incomingRoomId.clear();
+    }
 }
