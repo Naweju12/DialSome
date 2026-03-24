@@ -60,6 +60,8 @@ public:
     Q_INVOKABLE void acceptCall();
     bool speakerOn() const;
     Q_INVOKABLE void setSpeakerOn(bool on);
+    Q_INVOKABLE bool canUseFullScreenIntent();
+    Q_INVOKABLE void requestFullScreenIntentPermission();
 
 signals:
     void messageChanged();

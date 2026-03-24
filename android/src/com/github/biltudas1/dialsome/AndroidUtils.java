@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.app.NotificationManager;
 
 public class AndroidUtils {
     /**
@@ -69,6 +70,32 @@ public class AndroidUtils {
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 context.startActivity(intent);
             }
+        }
+    }
+
+    /**
+     * Checks if the app has permission to launch full-screen intents.
+     * Only relevant for Android 14 (API 34) and above.
+     */
+    public static boolean canUseFullScreenIntent(Context context) {
+        if (Build.VERSION.SDK_INT >= 34) { // Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+            NotificationManager nm = context.getSystemService(NotificationManager.class);
+            return nm != null && nm.canUseFullScreenIntent();
+        }
+        // For Android 13 and below, the permission is granted by default 
+        // as long as it is declared in the AndroidManifest.xml
+        return true; 
+    }
+
+    /**
+     * Opens the specific settings page for the user to grant the Full-Screen Intent permission.
+     */
+    public static void requestFullScreenIntentPermission(Context context) {
+        if (Build.VERSION.SDK_INT >= 34) { 
+            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT);
+            intent.setData(Uri.parse("package:" + context.getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
         }
     }
 }

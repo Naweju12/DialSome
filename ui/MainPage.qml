@@ -303,6 +303,32 @@ ColumnLayout {
     // Push everything to the top
     Item {
         Layout.fillHeight: true
+
+        Dialog {
+            id: fullScreenPermissionDialog
+            title: "Permission Required"
+            standardButtons: Dialog.Ok | Dialog.Cancel
+            anchors.centerIn: Overlay.overlay
+            modal: true
+
+            Label {
+                text: "To receive incoming calls while your phone is locked, DialSome needs Full-Screen Alert permissions."
+                wrapMode: Label.WordWrap
+                width: 300
+            }
+
+            onAccepted: {
+                // 2. If they click OK, launch the Android Settings page
+                myBackend.requestFullScreenIntentPermission();
+            }
+        }
+
+        // 3. Check the permission when this page loads
+        Component.onCompleted: {
+            if (!myBackend.canUseFullScreenIntent()) {
+                fullScreenPermissionDialog.open();
+            }
+        }
     }
 
     Popup {

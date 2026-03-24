@@ -603,3 +603,30 @@ void Backend::setSpeakerOn(bool on) {
     }
     #endif
 }
+
+bool Backend::canUseFullScreenIntent() {
+    #ifdef Q_OS_ANDROID
+        // Call the static Java method canUseFullScreenIntent in AndroidUtils
+        jboolean result = QJniObject::callStaticMethod<jboolean>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "canUseFullScreenIntent",
+            "(Landroid/content/Context;)Z",
+            QNativeInterface::QAndroidApplication::context()
+        );
+        return result;
+    #else
+        return true; // Not Android, permission doesn't apply
+    #endif
+}
+
+void Backend::requestFullScreenIntentPermission() {
+    #ifdef Q_OS_ANDROID
+        // Call the static Java method requestFullScreenIntentPermission in AndroidUtils
+        QJniObject::callStaticMethod<void>(
+            "com/github/biltudas1/dialsome/AndroidUtils",
+            "requestFullScreenIntentPermission",
+            "(Landroid/content/Context;)V",
+            QNativeInterface::QAndroidApplication::context()
+        );
+    #endif
+}
