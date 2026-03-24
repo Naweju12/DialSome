@@ -72,7 +72,7 @@ ApplicationWindow {
             mainStack.replace(loginPageComponent)
         }
         function onStartingCall() {
-            mainStack.replace(callingPageComponent)
+            mainStack.push(callingPageComponent)
         }
         function onIncomingCall() {
             mainStack.push(incomingCallPageComponent)
