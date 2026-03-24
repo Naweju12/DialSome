@@ -54,6 +54,15 @@ public class MainActivity extends QtActivity {
         }
     }
 
+    public static void clearCallNotification(Context context) {
+        if (context != null) {
+            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(INCOMING_CALL_NOTIF_ID); // 1001
+            }
+        }
+    }
+
     private void handleCallIntent(Intent intent) {
         if (intent != null && intent.getAction() != null) {
             String action = intent.getAction();

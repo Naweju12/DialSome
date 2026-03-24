@@ -471,6 +471,19 @@ void Backend::endCall() {
         m_webSocket.close();
     }
 
+    // Clear the Android notification in case they hit "Reject" on the QML UI
+    #ifdef Q_OS_ANDROID
+    QJniObject context = QNativeInterface::QAndroidApplication::context();
+    if (context.isValid()) {
+        QJniObject::callStaticMethod<void>(
+            "com/github/biltudas1/dialsome/MainActivity",
+            "clearCallNotification",
+            "(Landroid/content/Context;)V",
+            context.object()
+        );
+    }
+    #endif
+
     this->m_callerEmail = ""; 
     this->m_callerName = "";
     this->m_isCaller = false;
@@ -559,5 +572,18 @@ void Backend::acceptCall() {
         // Join the WebRTC room now that the user has accepted
         joinCall(m_incomingRoomId, m_callerEmail, m_callerName);
         m_incomingRoomId.clear();
+
+        // Clear the Android notification to stop the ringtone
+        #ifdef Q_OS_ANDROID
+        QJniObject context = QNativeInterface::QAndroidApplication::context();
+        if (context.isValid()) {
+            QJniObject::callStaticMethod<void>(
+                "com/github/biltudas1/dialsome/MainActivity",
+                "clearCallNotification",
+                "(Landroid/content/Context;)V",
+                context.object()
+            );
+        }
+        #endif
     }
 }
