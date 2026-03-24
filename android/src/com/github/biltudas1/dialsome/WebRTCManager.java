@@ -84,6 +84,31 @@ public class WebRTCManager {
         }
     }
 
+    public void setSpeaker(boolean enable) {
+        if (audioManager == null) return;
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
+            AudioDeviceInfo targetDevice = null;
+            
+            // Choose between loudspeaker and earpiece
+            int targetType = enable ? AudioDeviceInfo.TYPE_BUILTIN_SPEAKER : AudioDeviceInfo.TYPE_BUILTIN_EARPIECE;
+            
+            for (AudioDeviceInfo device : devices) {
+                if (device.getType() == targetType) {
+                    targetDevice = device;
+                    break;
+                }
+            }
+            if (targetDevice != null) {
+                audioManager.setCommunicationDevice(targetDevice);
+            }
+        } else {
+            // Fallback for older Android versions
+            audioManager.setSpeakerphoneOn(enable);
+        }
+    }
+
     public void createPeerConnection() {
         PeerConnection.RTCConfiguration config = new PeerConnection.RTCConfiguration(
             Collections.singletonList(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())

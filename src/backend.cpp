@@ -587,3 +587,19 @@ void Backend::acceptCall() {
         #endif
     }
 }
+
+bool Backend::speakerOn() const {
+    return m_speakerOn;
+}
+
+void Backend::setSpeakerOn(bool on) {
+    if (m_speakerOn == on) return;
+    m_speakerOn = on;
+    emit speakerOnChanged();
+
+    #ifdef Q_OS_ANDROID
+    if (m_webrtc.isValid()) {
+        m_webrtc.callMethod<void>("setSpeaker", "(Z)V", on);
+    }
+    #endif
+}
