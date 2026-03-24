@@ -21,6 +21,8 @@ public class MainActivity extends QtActivity {
         super.onCreate(savedInstanceState);
         instance = this; // Save instance reference
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true);
             setTurnScreenOn(true);
