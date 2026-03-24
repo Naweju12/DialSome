@@ -167,42 +167,6 @@ Backend::Backend(QObject *parent) : QObject(parent) {
 
     connect(&m_webSocket, &QWebSocket::connected, this, &Backend::onConnected);
     connect(&m_webSocket, &QWebSocket::textMessageReceived, this, &Backend::onTextMessageReceived);
-
-    #ifdef Q_OS_ANDROID
-        QJniObject context = QNativeInterface::QAndroidApplication::context();
-        QJniObject roomIdJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingRoomId",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QJniObject roomNameJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingRoomName",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QJniObject emailJni = QJniObject::callStaticMethod<jstring>(
-            "com/github/biltudas1/dialsome/AndroidUtils",
-            "getIncomingCallerEmail",
-            "(Landroid/content/Context;)Ljava/lang/String;",
-            context.object()
-        );
-
-        QString roomId = roomIdJni.toString();
-        QString roomName = roomNameJni.toString();
-        QString email = emailJni.toString();
-
-        if (!roomId.isEmpty()) {
-            qDebug() << "App was woken up for a call! Room:" << roomId;
-            saveToHistory(email, roomName, true);
-            // Optionally prompt the user, or immediately join:
-            // joinCall(roomId, email, roomName);
-            FCMManager::instance()->processIncomingSignal(roomId, email, roomName);
-        }
-    #endif
 }
 
 extern "C" {
