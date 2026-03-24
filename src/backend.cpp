@@ -281,7 +281,7 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_showIncom
 }
 
 void Backend::startCall(const QString &email) {
-    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+    if (this->m_webrtc.isValid()) {
         qDebug() << "Call already in progress, ignoring startCall.";
         return;
     }
@@ -324,7 +324,7 @@ void Backend::startCall(const QString &email) {
 }
 
 void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
-    if (!this->m_callerEmail.isEmpty() || this->m_webrtc.isValid()) {
+    if (this->m_webrtc.isValid()) {
         qDebug() << "Call already in progress, ignoring joinCall.";
         return;
     }
