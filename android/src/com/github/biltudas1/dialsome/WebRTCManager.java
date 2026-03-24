@@ -59,22 +59,22 @@ public class WebRTCManager {
             audioManager.setMode(AudioManager.MODE_IN_COMMUNICATION);
             audioManager.setMicrophoneMute(false);
 
-            // Modern replacement for setSpeakerphoneOn(true) for API 31+
+            // Modern replacement for API 31+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 List<AudioDeviceInfo> devices = audioManager.getAvailableCommunicationDevices();
-                AudioDeviceInfo speakerDevice = null;
+                AudioDeviceInfo earpieceDevice = null;
                 for (AudioDeviceInfo device : devices) {
-                    if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
-                        speakerDevice = device;
+                    if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                        earpieceDevice = device;
                         break;
                     }
                 }
-                if (speakerDevice != null) {
-                    audioManager.setCommunicationDevice(speakerDevice);
+                if (earpieceDevice != null) {
+                    audioManager.setCommunicationDevice(earpieceDevice);
                 }
             } else {
-                // Fallback for older versions (suppressed warning)
-                audioManager.setSpeakerphoneOn(true);
+                // Fallback for older versions: ensure speaker is OFF by default
+                audioManager.setSpeakerphoneOn(false);
             }
         } else {
             audioManager.setMode(AudioManager.MODE_NORMAL);
