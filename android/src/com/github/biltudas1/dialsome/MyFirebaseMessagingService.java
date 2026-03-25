@@ -63,6 +63,16 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 String channelId = "MissedCalls";
 
+                // Create the NotificationChannel for Android O and above
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    NotificationChannel channel = new NotificationChannel(
+                            channelId, 
+                            "Missed Calls", 
+                            NotificationManager.IMPORTANCE_DEFAULT
+                    );
+                    nm.createNotificationChannel(channel);
+                }
+
                 NotificationCompat.Builder missedCallBuilder = new NotificationCompat.Builder(this, channelId)
                         .setSmallIcon(android.R.drawable.ic_menu_call)
                         .setContentTitle("Missed Call")
