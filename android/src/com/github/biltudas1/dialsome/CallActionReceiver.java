@@ -23,6 +23,7 @@ public class CallActionReceiver extends BroadcastReceiver {
         // Only handle REJECT_CALL here
         if ("REJECT_CALL".equals(action)) {
             Log.d(TAG, "Call rejected from notification.");
+            CallStateManager.isIncomingCallRinging = false;
             
             // 1. Cancel notification
             nm.cancel(INCOMING_CALL_NOTIF_ID);
@@ -37,6 +38,7 @@ public class CallActionReceiver extends BroadcastReceiver {
         }
         else if ("ACCEPT_CALL".equals(action)) {
             Log.d(TAG, "Call accepted from notification.");
+            CallStateManager.isIncomingCallRinging = false;
             CallStateManager.isCallActive = true;
             nm.cancel(INCOMING_CALL_NOTIF_ID);
 

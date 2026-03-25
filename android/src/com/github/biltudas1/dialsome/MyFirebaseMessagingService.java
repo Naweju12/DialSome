@@ -51,6 +51,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerName = data.get("caller_name");
 
                 Log.d(TAG, "FCM Signal: " + type + " Room: " + roomId + " From: " + callerEmail + "(" + callerName + ")");
+                CallStateManager.isIncomingCallRinging = true;
                 wakeUpApp(callerEmail, roomId, callerName);
             } else if ("end_call".equals(type)) {
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -62,7 +63,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerEmail = data.get("caller_email");
 
                 // Only show missed call if the call was NEVER answered
-                if (!CallStateManager.isCallActive) {
+                if (CallStateManager.isIncomingCallRinging && !CallStateManager.isCallActive) {
                     String channelId = "MissedCalls";
 
                     // Create the NotificationChannel for Android O and above
@@ -86,6 +87,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 }
 
                 // Reset the state for the next time a call comes in
+                CallStateManager.isIncomingCallRinging = false;
                 CallStateManager.isCallActive = false;
 
                 try {
