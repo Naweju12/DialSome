@@ -73,6 +73,8 @@ public class MainActivity extends QtActivity {
             String name = intent.getStringExtra("caller_name");
 
             if ("ACCEPT_CALL".equals(action)) {
+                CallStateManager.isCallActive = true;
+                
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 if (nm != null) nm.cancel(INCOMING_CALL_NOTIF_ID);
 

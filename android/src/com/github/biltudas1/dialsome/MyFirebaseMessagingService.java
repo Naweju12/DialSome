@@ -51,6 +51,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerName = data.get("caller_name");
 
                 Log.d(TAG, "FCM Signal: " + type + " Room: " + roomId + " From: " + callerEmail + "(" + callerName + ")");
+                CallStateManager.isIncomingCallRinging = true;
                 wakeUpApp(callerEmail, roomId, callerName);
             } else if ("end_call".equals(type)) {
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -58,6 +59,37 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 String email = data.get("to");
                 Log.d(TAG, "FCM Signal: " + type + " to: " + email);
+                String callerName = data.get("caller_name");
+                String callerEmail = data.get("caller_email");
+
+                // Only show missed call if the call was NEVER answered
+                if (CallStateManager.isIncomingCallRinging && !CallStateManager.isCallActive) {
+                    String channelId = "MissedCalls";
+
+                    // Create the NotificationChannel for Android O and above
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        NotificationChannel channel = new NotificationChannel(
+                                channelId, 
+                                "Missed Calls", 
+                                NotificationManager.IMPORTANCE_DEFAULT
+                        );
+                        nm.createNotificationChannel(channel);
+                    }
+
+                    NotificationCompat.Builder missedCallBuilder = new NotificationCompat.Builder(this, channelId)
+                            .setSmallIcon(android.R.drawable.ic_menu_call)
+                            .setContentTitle("Missed Call")
+                            .setContentText("You missed a call from " + callerName)
+                            .setAutoCancel(true)
+                            .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+                    nm.notify(1002, missedCallBuilder.build());
+                }
+
+                // Reset the state for the next time a call comes in
+                CallStateManager.isIncomingCallRinging = false;
+                CallStateManager.isCallActive = false;
+
                 try {
                     onCallMessageEnd(email);
                 } catch (UnsatisfiedLinkError e) {
