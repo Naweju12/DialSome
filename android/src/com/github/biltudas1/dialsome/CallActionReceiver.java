@@ -37,6 +37,7 @@ public class CallActionReceiver extends BroadcastReceiver {
         }
         else if ("ACCEPT_CALL".equals(action)) {
             Log.d(TAG, "Call accepted from notification.");
+            CallStateManager.isCallActive = true;
             nm.cancel(INCOMING_CALL_NOTIF_ID);
 
             // Launch the main app Activity

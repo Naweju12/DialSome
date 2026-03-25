@@ -61,26 +61,32 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerName = data.get("caller_name");
                 String callerEmail = data.get("caller_email");
 
-                String channelId = "MissedCalls";
+                // Only show missed call if the call was NEVER answered
+                if (!CallStateManager.isCallActive) {
+                    String channelId = "MissedCalls";
 
-                // Create the NotificationChannel for Android O and above
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    NotificationChannel channel = new NotificationChannel(
-                            channelId, 
-                            "Missed Calls", 
-                            NotificationManager.IMPORTANCE_DEFAULT
-                    );
-                    nm.createNotificationChannel(channel);
+                    // Create the NotificationChannel for Android O and above
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        NotificationChannel channel = new NotificationChannel(
+                                channelId, 
+                                "Missed Calls", 
+                                NotificationManager.IMPORTANCE_DEFAULT
+                        );
+                        nm.createNotificationChannel(channel);
+                    }
+
+                    NotificationCompat.Builder missedCallBuilder = new NotificationCompat.Builder(this, channelId)
+                            .setSmallIcon(android.R.drawable.ic_menu_call)
+                            .setContentTitle("Missed Call")
+                            .setContentText("You missed a call from " + callerName)
+                            .setAutoCancel(true)
+                            .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+                    nm.notify(1002, missedCallBuilder.build());
                 }
 
-                NotificationCompat.Builder missedCallBuilder = new NotificationCompat.Builder(this, channelId)
-                        .setSmallIcon(android.R.drawable.ic_menu_call)
-                        .setContentTitle("Missed Call")
-                        .setContentText("You missed a call from " + callerName)
-                        .setAutoCancel(true)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT);
-
-                nm.notify(1002, missedCallBuilder.build());
+                // Reset the state for the next time a call comes in
+                CallStateManager.isCallActive = false;
 
                 try {
                     onCallMessageEnd(email);
