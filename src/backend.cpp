@@ -462,6 +462,11 @@ void Backend::requestNotificationPermission() {
 }
 
 void Backend::endCall() {
+    if (this->m_api != nullptr && !this->m_callerEmail.isEmpty()) {
+        qDebug() << "Notifying server to end call with peer:" << this->m_callerEmail;
+        this->m_api->end_call(this->m_callerEmail, this->m_jwtAccessToken);
+    }
+    
     if (this->m_webrtc.isValid()) {
         this->m_webrtc.callMethod<void>("close", "()V");
         this->m_webrtc = QJniObject(); // Clear the object

@@ -58,6 +58,20 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 String email = data.get("to");
                 Log.d(TAG, "FCM Signal: " + type + " to: " + email);
+                String callerName = data.get("caller_name");
+                String callerEmail = data.get("caller_email");
+
+                String channelId = "MissedCalls";
+
+                NotificationCompat.Builder missedCallBuilder = new NotificationCompat.Builder(this, channelId)
+                        .setSmallIcon(android.R.drawable.ic_menu_call)
+                        .setContentTitle("Missed Call")
+                        .setContentText("You missed a call from " + callerName)
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+                nm.notify(1002, missedCallBuilder.build());
+
                 try {
                     onCallMessageEnd(email);
                 } catch (UnsatisfiedLinkError e) {

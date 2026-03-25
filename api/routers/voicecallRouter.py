@@ -101,7 +101,12 @@ async def end_call(
       status_code=status.HTTP_404_NOT_FOUND,
     )
 
-  payload = {"type": "end_call", "to": data.email}
+  payload = {
+    "type": "end_call",
+    "to": data.email,
+    "caller_email": current_user.email,
+    "caller_name": current_user.firstname,
+  }
   await fcm.send_fcm_notification(target_user.fcm_token, payload)
   return JSONResponse(
     content={"status": True, "message": "Call ended successfully"},
