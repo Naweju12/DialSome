@@ -1,28 +1,163 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls.Material
 import QtQuick.Layouts
 
 Rectangle {
     id: loginPage
     anchors.fill: parent
-    color: "#000000"
+    color: "#0B0F19" // Modern premium dark blue/grey background
+
+    property bool isLoggingIn: false
+    property string statusText: ""
+
+    Connections {
+        target: myBackend
+        function onLoginFinished(email, name, userid, refresh_token) {
+            loginPage.isLoggingIn = false
+        }
+        function onLoginError(error) {
+            loginPage.isLoggingIn = false
+            myUtils.showToast("Login failed: " + error)
+        }
+    }
+
+    Connections {
+        target: myBackend.google
+        function onDataCollectionFinished(email, displayName, idToken, userID) {
+            loginPage.statusText = "Connecting to DialSome..."
+        }
+        function onDataCollectionError(error) {
+            loginPage.isLoggingIn = false
+            myUtils.showToast("Google sign-in cancelled")
+        }
+    }
+
+    // Elegant background ambient glow effect
+    Rectangle {
+        width: 300
+        height: 300
+        radius: 150
+        color: "#1E3A8A"
+        opacity: 0.12
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
+        layer.enabled: true
+    }
 
     ColumnLayout {
         anchors.centerIn: parent
-        spacing: 20
+        width: Math.min(parent.width * 0.85, 320)
+        spacing: 35
 
-        Text {
-            text: "Welcome to DialSome"
-            color: "#5B89F7"
-            font.pixelSize: 24
-            Layout.alignment: Qt.AlignHCenter
+        // App Branding Section
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 12
+
+            Image {
+                source: "qrc:/qt/qml/DialSome/icons/dial.png"
+                Layout.preferredWidth: 80
+                Layout.preferredHeight: 80
+                Layout.alignment: Qt.AlignHCenter
+                fillMode: Image.PreserveAspectFit
+                
+                // Pulse opacity animation when logging in
+                NumberAnimation on opacity {
+                    running: loginPage.isLoggingIn
+                    from: 1.0; to: 0.4
+                    duration: 1000
+                    loops: Animation.Infinite
+                    easing.type: Easing.InOutQuad
+                }
+            }
+
+            Text {
+                text: "DialSome"
+                color: "#FFFFFF"
+                font.pixelSize: 28
+                font.bold: true
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "Secure HD Voice Calling"
+                color: "#94A3B8"
+                font.pixelSize: 14
+                Layout.alignment: Qt.AlignHCenter
+            }
         }
 
-        Button {
-            text: "Login with Google"
-            Layout.preferredWidth: 200
+        // Interactive / Loading Area
+        Item {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 120
             Layout.alignment: Qt.AlignHCenter
-            onClicked: myBackend.google.loginWithGoogle("87640868239-dje4suitg3fi100c8hirlunckcji4g40.apps.googleusercontent.com")
+
+            // Google Login Button (Fades out when logging in)
+            ColumnLayout {
+                anchors.centerIn: parent
+                width: parent.width
+                spacing: 15
+                opacity: loginPage.isLoggingIn ? 0.0 : 1.0
+                visible: opacity > 0.0
+                
+                Behavior on opacity {
+                    NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
+                }
+
+                Button {
+                    text: "Sign in with Google"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 48
+                    Material.background: "#2563EB"
+                    Material.foreground: "#FFFFFF"
+                    font.pixelSize: 15
+                    font.bold: true
+
+                    onClicked: {
+                        loginPage.isLoggingIn = true
+                        loginPage.statusText = "Authenticating with Google..."
+                        myBackend.google.loginWithGoogle("87640868239-dje4suitg3fi100c8hirlunckcji4g40.apps.googleusercontent.com")
+                    }
+                }
+            }
+
+            // Premium Busy Indicator & Status (Fades in when logging in)
+            ColumnLayout {
+                anchors.centerIn: parent
+                width: parent.width
+                spacing: 20
+                opacity: loginPage.isLoggingIn ? 1.0 : 0.0
+                visible: opacity > 0.0
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
+                }
+
+                BusyIndicator {
+                    Layout.alignment: Qt.AlignHCenter
+                    running: loginPage.isLoggingIn
+                    Material.accent: "#3B82F6"
+                }
+
+                Text {
+                    id: statusLabel
+                    text: loginPage.statusText
+                    color: "#3B82F6"
+                    font.pixelSize: 14
+                    Layout.alignment: Qt.AlignHCenter
+                    
+                    // Simple smooth opacity transition when text changes
+                    Behavior on text {
+                        SequentialAnimation {
+                            NumberAnimation { target: statusLabel; property: "opacity"; to: 0; duration: 80 }
+                            PropertyAction { target: statusLabel; property: "text" }
+                            NumberAnimation { target: statusLabel; property: "opacity"; to: 1; duration: 120 }
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -48,95 +48,122 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     });
 
     connect(this->m_google, &Google::dataCollectionFinished, this, [this](const QString &email, const QString &displayName, const QString &idToken, const QString &userID) {
-        QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + "/users/register";
-        QUrl url(hostUrl);
-        QNetworkRequest request(url);
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        request.setRawHeader("Authorization", "Bearer " + idToken.toUtf8());
+        QString loginUrlStr = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + "/users/login";
+        QUrl loginUrl(loginUrlStr);
+        QNetworkRequest loginRequest(loginUrl);
+        loginRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        loginRequest.setRawHeader("Authorization", "Bearer " + idToken.toUtf8());
 
-        QNetworkReply *reply = m_networkManager.post(request, QByteArray());
-        connect(reply, &QNetworkReply::finished, this, [this, reply, idToken]() {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            qDebug() << "HTTP Status Code:" << statusCode;
+        qDebug() << "Fast-Path: Attempting direct login first...";
+        QNetworkReply *loginReply = m_networkManager.post(loginRequest, QByteArray());
+        connect(loginReply, &QNetworkReply::finished, this, [this, loginReply, idToken]() {
+            int statusCode = loginReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+            qDebug() << "Fast-Path Login status code:" << statusCode;
 
-            if (statusCode == 201 || statusCode == 409) {
-                QByteArray responseData = reply->readAll();
-
+            if (loginReply->error() == QNetworkReply::NoError && statusCode == 200) {
+                QByteArray responseData = loginReply->readAll();
                 QJsonParseError parseError;
                 QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
 
                 if (parseError.error == QJsonParseError::NoError && jsonDoc.isObject()) {
                     QJsonObject jsonObj = jsonDoc.object();
+                    if (jsonObj.contains("status") && jsonObj.value("status").toBool() && jsonObj.contains("data")) {
+                        QJsonObject dataJson = jsonObj.value("data").toObject();
+                        if (dataJson.contains("id") && dataJson.contains("email") && dataJson.contains("firstname") && dataJson.contains("lastname")) {
+                            QString id = dataJson.value("id").toString();
+                            QString email = dataJson.value("email").toString();
+                            QString firstname = dataJson.value("firstname").toString();
 
-                    if (jsonObj.contains("status")) {
-                        bool statusValue = jsonObj.value("status").toBool();
-                        qDebug() << "Server Status:" << statusValue;
-                        emit this->registerFinished(idToken);
-                    }
-                } else {
-                    qDebug() << "JSON Parse Error:" << parseError.errorString();
-                    emit this->loginError("Network Error");
-                }
-            } else {
-                qDebug() << "Network Error:" << reply->errorString();
-                emit this->loginError("Network Error");
-            }
-            reply->deleteLater();
-        });
-    });
-
-    connect(this, &Backend::registerFinished, this, [this](const QString &idToken) {
-        QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + "/users/login";
-        QUrl url(hostUrl);
-        QNetworkRequest request(url);
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-        request.setRawHeader("Authorization", "Bearer " + idToken.toUtf8());
-
-        QNetworkReply *reply = m_networkManager.post(request, QByteArray());
-        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-            int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-            qDebug() << "HTTP Status Code:" << statusCode;
-
-            if (reply->error() == QNetworkReply::NoError && statusCode == 200) {
-                QByteArray responseData = reply->readAll();
-
-                QJsonParseError parseError;
-                QJsonDocument jsonDoc = QJsonDocument::fromJson(responseData, &parseError);
-
-                if (parseError.error == QJsonParseError::NoError && jsonDoc.isObject()) {
-                    QJsonObject jsonObj = jsonDoc.object();
-
-                    if (jsonObj.contains("status")) {
-                        bool statusValue = jsonObj.value("status").toBool();
-                        qDebug() << "Server Status:" << statusValue;
-                        
-                        if (statusValue && jsonObj.contains("data")) {
-                            QJsonObject dataJson = jsonObj.value("data").toObject();
-                            if (dataJson.contains("id") && dataJson.contains("email") && dataJson.contains("firstname") && dataJson.contains("lastname")) {
-                                QString id = dataJson.value("id").toString();
-                                QString email = dataJson.value("email").toString();
-                                QString firstname = dataJson.value("firstname").toString();
-
-                                if (dataJson.contains("jwt")) {
-                                    QJsonObject jwtJson = dataJson.value("jwt").toObject();
-                                    if (jwtJson.contains("refresh_token") && jwtJson.contains("access_token")) {
-                                        QString refresh_token = jwtJson.value("refresh_token").toString();
-                                        this->m_jwtAccessToken = jwtJson.value("access_token").toString();
-                                        emit this->loginFinished(email, firstname, id, refresh_token);
-                                    }
+                            if (dataJson.contains("jwt")) {
+                                QJsonObject jwtJson = dataJson.value("jwt").toObject();
+                                if (jwtJson.contains("refresh_token") && jwtJson.contains("access_token")) {
+                                    QString refresh_token = jwtJson.value("refresh_token").toString();
+                                    this->m_jwtAccessToken = jwtJson.value("access_token").toString();
+                                    qDebug() << "Fast-Path: Direct login successful!";
+                                    emit this->loginFinished(email, firstname, id, refresh_token);
+                                    loginReply->deleteLater();
+                                    return;
                                 }
                             }
                         }
                     }
-                } else {
-                    qDebug() << "JSON Parse Error:" << parseError.errorString();
-                    emit this->loginError("Network Error");
                 }
+                qDebug() << "Fast-Path: Parsing failed despite 200 OK.";
+                emit this->loginError("Network Error");
+            } else if (statusCode == 404) {
+                // User is not registered! Fall back to registration.
+                qDebug() << "Fast-Path: User not found (404). Falling back to register...";
+                
+                QString registerUrlStr = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + "/users/register";
+                QUrl registerUrl(registerUrlStr);
+                QNetworkRequest registerRequest(registerUrl);
+                registerRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+                registerRequest.setRawHeader("Authorization", "Bearer " + idToken.toUtf8());
+
+                QNetworkReply *registerReply = m_networkManager.post(registerRequest, QByteArray());
+                connect(registerReply, &QNetworkReply::finished, this, [this, registerReply, idToken]() {
+                    int regStatusCode = registerReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                    qDebug() << "Fallback Register status code:" << regStatusCode;
+
+                    if (regStatusCode == 201 || regStatusCode == 409) {
+                        // Registration success, now login to get tokens
+                        qDebug() << "Fallback Register successful. Logging in now...";
+                        
+                        QString finalLoginUrlStr = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + "/users/login";
+                        QUrl finalLoginUrl(finalLoginUrlStr);
+                        QNetworkRequest finalLoginRequest(finalLoginUrl);
+                        finalLoginRequest.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+                        finalLoginRequest.setRawHeader("Authorization", "Bearer " + idToken.toUtf8());
+
+                        QNetworkReply *finalLoginReply = m_networkManager.post(finalLoginRequest, QByteArray());
+                        connect(finalLoginReply, &QNetworkReply::finished, this, [this, finalLoginReply]() {
+                            int finalStatusCode = finalLoginReply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+                            qDebug() << "Final Login status code:" << finalStatusCode;
+
+                            if (finalLoginReply->error() == QNetworkReply::NoError && finalStatusCode == 200) {
+                                QByteArray finalData = finalLoginReply->readAll();
+                                QJsonParseError finalParseError;
+                                QJsonDocument finalDoc = QJsonDocument::fromJson(finalData, &finalParseError);
+
+                                if (finalParseError.error == QJsonParseError::NoError && finalDoc.isObject()) {
+                                    QJsonObject finalObj = finalDoc.object();
+                                    if (finalObj.contains("status") && finalObj.value("status").toBool() && finalObj.contains("data")) {
+                                        QJsonObject dataJson = finalObj.value("data").toObject();
+                                        if (dataJson.contains("id") && dataJson.contains("email") && dataJson.contains("firstname") && dataJson.contains("lastname")) {
+                                            QString id = dataJson.value("id").toString();
+                                            QString email = dataJson.value("email").toString();
+                                            QString firstname = dataJson.value("firstname").toString();
+
+                                            if (dataJson.contains("jwt")) {
+                                                QJsonObject jwtJson = dataJson.value("jwt").toObject();
+                                                if (jwtJson.contains("refresh_token") && jwtJson.contains("access_token")) {
+                                                    QString refresh_token = jwtJson.value("refresh_token").toString();
+                                                    this->m_jwtAccessToken = jwtJson.value("access_token").toString();
+                                                    qDebug() << "Fallback Login successful!";
+                                                    emit this->loginFinished(email, firstname, id, refresh_token);
+                                                    finalLoginReply->deleteLater();
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            qDebug() << "Fallback Login failed.";
+                            emit this->loginError("Network Error");
+                            finalLoginReply->deleteLater();
+                        });
+                    } else {
+                        qDebug() << "Fallback Register failed:" << registerReply->errorString();
+                        emit this->loginError("Network Error");
+                    }
+                    registerReply->deleteLater();
+                });
             } else {
-                qDebug() << "Network Error:" << reply->errorString();
+                qDebug() << "Fast-Path Login failed with error:" << loginReply->errorString();
                 emit this->loginError("Network Error");
             }
-            reply->deleteLater();
+            loginReply->deleteLater();
         });
     });
 
