@@ -171,6 +171,11 @@ Backend::Backend(QObject *parent) : QObject(parent) {
         this->m_storage->saveRefreshToken(refresh_token);
         this->m_storage->save("id", userID); 
 
+        // Fetch contacts immediately upon login
+        if (this->m_api) {
+            this->m_api->fetch_contacts(this->m_jwtAccessToken);
+        }
+
         QString cachedToken = this->m_storage->get("fcm_token");
         if (!cachedToken.isEmpty()) {
             this->m_fcm->updateTokenOnBackend(cachedToken);

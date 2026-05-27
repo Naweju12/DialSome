@@ -41,6 +41,7 @@ Rectangle {
         // App Branding Section
         ColumnLayout {
             Layout.fillWidth: true
+            Layout.alignment: Qt.AlignHCenter
             spacing: 16
 
             // Beautiful circular container for the icon with integrated glow
