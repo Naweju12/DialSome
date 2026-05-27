@@ -37,5 +37,5 @@ FIREBASE_SERVICE_ACCOUNT = json.loads(
 )
 
 # User Token
-REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60  # 7 Days
+REFRESH_TOKEN_EXPIRY = 90 * 24 * 60 * 60  # 90 Days
 ACCESS_TOKEN_EXPIRY = 60 * 60  # 1 hour
