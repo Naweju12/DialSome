@@ -51,6 +51,7 @@ qt_add_qml_module(DialSome
         src/fcmmanager.h src/fcmmanager.cpp
         src/backend.h src/backend.cpp
     RESOURCES
+        icons/logo.png
         icons/dial.png
         icons/user.png
         icons/settings.png

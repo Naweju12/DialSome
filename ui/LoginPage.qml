@@ -65,9 +65,9 @@ Rectangle {
                 }
 
                 Image {
-                    source: "qrc:/qt/qml/DialSome/icons/dial.png"
-                    width: 56
-                    height: 56
+                    source: "qrc:/qt/qml/DialSome/icons/logo.png"
+                    width: 64
+                    height: 64
                     anchors.centerIn: parent
                     fillMode: Image.PreserveAspectFit
                     
@@ -91,7 +91,7 @@ Rectangle {
             }
 
             Text {
-                text: "Secure HD Voice Calling"
+                text: "Simple • Secure • Instant"
                 color: "#94A3B8"
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
