@@ -33,18 +33,6 @@ Rectangle {
         }
     }
 
-    // Elegant background ambient glow effect
-    Rectangle {
-        width: 300
-        height: 300
-        radius: 150
-        color: "#1E3A8A"
-        opacity: 0.12
-        anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
-        layer.enabled: true
-    }
-
     ColumnLayout {
         anchors.centerIn: parent
         width: Math.min(parent.width * 0.85, 320)
@@ -53,22 +41,44 @@ Rectangle {
         // App Branding Section
         ColumnLayout {
             Layout.fillWidth: true
-            spacing: 12
+            spacing: 16
 
-            Image {
-                source: "qrc:/qt/qml/DialSome/icons/dial.png"
-                Layout.preferredWidth: 80
-                Layout.preferredHeight: 80
+            // Beautiful circular container for the icon with integrated glow
+            Rectangle {
                 Layout.alignment: Qt.AlignHCenter
-                fillMode: Image.PreserveAspectFit
-                
-                // Pulse opacity animation when logging in
-                NumberAnimation on opacity {
-                    running: loginPage.isLoggingIn
-                    from: 1.0; to: 0.4
-                    duration: 1000
-                    loops: Animation.Infinite
-                    easing.type: Easing.InOutQuad
+                width: 120
+                height: 120
+                radius: 60
+                color: "#131A26" // Slightly lighter dark blue for depth
+                border.color: "#1E293B" // Subtle modern border
+                border.width: 1.5
+
+                // Subtle ambient glow centered behind the container
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 136
+                    height: 136
+                    radius: 68
+                    color: "#3B82F6" // Brand blue glow
+                    opacity: 0.14
+                    z: -1
+                }
+
+                Image {
+                    source: "qrc:/qt/qml/DialSome/icons/dial.png"
+                    width: 56
+                    height: 56
+                    anchors.centerIn: parent
+                    fillMode: Image.PreserveAspectFit
+                    
+                    // Pulse opacity animation when logging in
+                    NumberAnimation on opacity {
+                        running: loginPage.isLoggingIn
+                        from: 1.0; to: 0.4
+                        duration: 1000
+                        loops: Animation.Infinite
+                        easing.type: Easing.InOutQuad
+                    }
                 }
             }
 
