@@ -180,7 +180,7 @@ ColumnLayout {
 
             TextField {
                 id: roomInput
-                placeholderText: "Enter Email ID"
+                placeholderText: "Enter Email(s), comma-separated"
                 color: "white"
                 background: Rectangle { color: "#333"; radius: 5 }
                 Layout.preferredWidth: 250

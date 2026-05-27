@@ -33,8 +33,10 @@ ColumnLayout {
                 text: myBackend.callerName
                 color: "#FFFFFF"
                 Layout.alignment: Qt.AlignHCenter
-
-                font.pixelSize: 30
+                font.pixelSize: myBackend.callerName.indexOf(",") !== -1 ? 18 : 30
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                Layout.preferredWidth: parent.width * 0.9
             }
 
             Text {

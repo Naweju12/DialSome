@@ -62,6 +62,9 @@ public:
     Q_INVOKABLE void setSpeakerOn(bool on);
     Q_INVOKABLE bool canUseFullScreenIntent();
     Q_INVOKABLE void requestFullScreenIntentPermission();
+    QString myEmail() const { return m_myEmail; }
+    void addActivePeer(const QString &email);
+    void removeActivePeer(const QString &email);
 
 signals:
     void messageChanged();
@@ -105,6 +108,8 @@ private:
     QVariantList m_recentCalls;
     QVariantList m_contacts;
     bool m_speakerOn = false;
+    QString m_myEmail = "";
+    QStringList m_activePeers;
 };
 
 #endif

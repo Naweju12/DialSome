@@ -11,21 +11,24 @@ import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRTCManager {
     private static final String TAG = "WebRTCManager";
     private PeerConnectionFactory factory;
-    private PeerConnection peerConnection;
+    private final Map<String, PeerConnection> peerConnections = new ConcurrentHashMap<>();
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
     private AudioManager audioManager;
     private Context mContext;
+    private boolean isForegroundServiceStarted = false;
 
-    // Native callbacks to C++
-    public native void onLocalIceCandidate(String sdp, String sdpMid, int sdpMLineIndex);
-    public native void onLocalSdp(String sdp, String type);
-    public native void onCallEstablished();
-    public native void onCallDisconnected();
+    // Native callbacks to C++ (updated with peerEmail)
+    public native void onLocalIceCandidate(String peerEmail, String sdp, String sdpMid, int sdpMLineIndex);
+    public native void onLocalSdp(String peerEmail, String sdp, String type);
+    public native void onCallEstablished(String peerEmail);
+    public native void onCallDisconnected(String peerEmail);
 
     public void init(Context context) {
         this.mContext = context;
@@ -109,43 +112,52 @@ public class WebRTCManager {
         }
     }
 
-    public void createPeerConnection() {
+    public void createPeerConnection(final String peerEmail) {
+        if (peerConnections.containsKey(peerEmail)) {
+            Log.d(TAG, "PeerConnection for " + peerEmail + " already exists.");
+            return;
+        }
+
         PeerConnection.RTCConfiguration config = new PeerConnection.RTCConfiguration(
             Collections.singletonList(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
         );
 
-        peerConnection = factory.createPeerConnection(config, new PeerConnection.Observer() {
+        PeerConnection pc = factory.createPeerConnection(config, new PeerConnection.Observer() {
             @Override public void onIceCandidate(IceCandidate iceCandidate) {
-                onLocalIceCandidate(iceCandidate.sdp, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex);
+                onLocalIceCandidate(peerEmail, iceCandidate.sdp, iceCandidate.sdpMid, iceCandidate.sdpMLineIndex);
             }
 
             @Override public void onIceConnectionChange(PeerConnection.IceConnectionState newState) {
-                Log.d(TAG, "ICE State Change: " + newState);
+                Log.d(TAG, "ICE State for " + peerEmail + ": " + newState);
                 if (newState == PeerConnection.IceConnectionState.CONNECTED ||
                     newState == PeerConnection.IceConnectionState.COMPLETED) {
-                    if (mContext != null) {
-                        Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            mContext.startForegroundService(serviceIntent);
-                        } else {
-                            mContext.startService(serviceIntent);
+                    
+                    synchronized (WebRTCManager.this) {
+                        if (!isForegroundServiceStarted && mContext != null) {
+                            Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                mContext.startForegroundService(serviceIntent);
+                            } else {
+                                mContext.startService(serviceIntent);
+                            }
+                            isForegroundServiceStarted = true;
                         }
                     }
 
-                    onCallEstablished();
+                    onCallEstablished(peerEmail);
                 }
                 else if (newState == PeerConnection.IceConnectionState.DISCONNECTED ||
                          newState == PeerConnection.IceConnectionState.FAILED ||
                          newState == PeerConnection.IceConnectionState.CLOSED) {
-                    onCallDisconnected();
+                    onCallDisconnected(peerEmail);
                 }
             }
 
             @Override public void onTrack(RtpTransceiver transceiver) {
-                Log.d(TAG, "Remote track received: " + transceiver.getReceiver().track().kind());
+                Log.d(TAG, "Remote track received from " + peerEmail + ": " + transceiver.getReceiver().track().kind());
             }
 
-            @Override public void onSignalingChange(PeerConnection.SignalingState s) { Log.d(TAG, "Signaling: " + s); }
+            @Override public void onSignalingChange(PeerConnection.SignalingState s) { Log.d(TAG, "Signaling for " + peerEmail + ": " + s); }
             @Override public void onIceConnectionReceivingChange(boolean b) {}
             @Override public void onIceGatheringChange(PeerConnection.IceGatheringState s) {}
             @Override public void onIceCandidatesRemoved(IceCandidate[] i) {}
@@ -155,73 +167,120 @@ public class WebRTCManager {
             @Override public void onRenegotiationNeeded() {}
         });
 
-        // Initialize local audio track if not already done
-        if (localAudioTrack == null) {
-            audioSource = factory.createAudioSource(new MediaConstraints());
-            localAudioTrack = factory.createAudioTrack("ARDAMSa0", audioSource);
-            localAudioTrack.setEnabled(true);
+        // Initialize local audio track if not already done (shared resource)
+        synchronized (this) {
+            if (localAudioTrack == null) {
+                audioSource = factory.createAudioSource(new MediaConstraints());
+                localAudioTrack = factory.createAudioTrack("ARDAMSa0", audioSource);
+                localAudioTrack.setEnabled(true);
+            }
         }
 
         // Add the track to PeerConnection to ensure bidirectional "sendrecv" in SDP
-        peerConnection.addTrack(localAudioTrack, Collections.singletonList("ARDAMS"));
+        pc.addTrack(localAudioTrack, Collections.singletonList("ARDAMS"));
+        peerConnections.put(peerEmail, pc);
     }
 
-    public void createOffer() {
+    public void createOffer(final String peerEmail) {
+        final PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc == null) return;
+
         MediaConstraints constraints = new MediaConstraints();
         constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
 
-        peerConnection.createOffer(new SimpleSdpObserver() {
+        pc.createOffer(new SimpleSdpObserver() {
             @Override public void onCreateSuccess(SessionDescription sdp) {
-                peerConnection.setLocalDescription(new SimpleSdpObserver(), sdp);
-                onLocalSdp(sdp.description, sdp.type.canonicalForm());
+                pc.setLocalDescription(new SimpleSdpObserver(), sdp);
+                onLocalSdp(peerEmail, sdp.description, sdp.type.canonicalForm());
             }
         }, constraints);
     }
 
-    public void handleRemoteSdp(String sdp, String type) {
-        if (peerConnection == null) return;
+    public void handleRemoteSdp(final String peerEmail, String sdp, String type) {
+        final PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc == null) return;
 
-        SessionDescription remoteSdp = new SessionDescription(
+        final SessionDescription remoteSdp = new SessionDescription(
             SessionDescription.Type.fromCanonicalForm(type), sdp);
 
-        peerConnection.setRemoteDescription(new SimpleSdpObserver() {
+        pc.setRemoteDescription(new SimpleSdpObserver() {
             @Override public void onSetSuccess() {
                 if (remoteSdp.type == SessionDescription.Type.OFFER) {
-                    createAnswer();
+                    createAnswer(peerEmail);
                 }
             }
         }, remoteSdp);
     }
 
-    private void createAnswer() {
+    private void createAnswer(final String peerEmail) {
+        final PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc == null) return;
+
         MediaConstraints constraints = new MediaConstraints();
         constraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
 
-        peerConnection.createAnswer(new SimpleSdpObserver() {
+        pc.createAnswer(new SimpleSdpObserver() {
             @Override public void onCreateSuccess(SessionDescription sdp) {
-                peerConnection.setLocalDescription(new SimpleSdpObserver(), sdp);
-                onLocalSdp(sdp.description, sdp.type.canonicalForm());
+                pc.setLocalDescription(new SimpleSdpObserver(), sdp);
+                onLocalSdp(peerEmail, sdp.description, sdp.type.canonicalForm());
             }
         }, constraints);
     }
 
-    public void addRemoteIceCandidate(String sdp, String sdpMid, int sdpMLineIndex) {
-        if (peerConnection != null) {
-            peerConnection.addIceCandidate(new IceCandidate(sdpMid, sdpMLineIndex, sdp));
+    public void addRemoteIceCandidate(final String peerEmail, String sdp, String sdpMid, int sdpMLineIndex) {
+        PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc != null) {
+            pc.addIceCandidate(new IceCandidate(sdpMid, sdpMLineIndex, sdp));
+        }
+    }
+
+    public void closePeer(final String peerEmail) {
+        PeerConnection pc = peerConnections.remove(peerEmail);
+        if (pc != null) {
+            pc.dispose();
+            Log.d(TAG, "Closed and disposed peer connection for: " + peerEmail);
+        }
+
+        // If no more active peer connections, stop the foreground service
+        synchronized (this) {
+            if (peerConnections.isEmpty() && isForegroundServiceStarted) {
+                if (mContext != null) {
+                    Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+                    mContext.stopService(serviceIntent);
+                }
+                isForegroundServiceStarted = false;
+            }
         }
     }
 
     public void close() {
-        if (mContext != null) {
-            Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
-            mContext.stopService(serviceIntent);
+        synchronized (this) {
+            if (mContext != null && isForegroundServiceStarted) {
+                Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+                mContext.stopService(serviceIntent);
+                isForegroundServiceStarted = false;
+            }
         }
 
         setupAudioManager(false);
-        if (peerConnection != null) peerConnection.dispose();
-        if (localAudioTrack != null) localAudioTrack.dispose();
-        if (audioSource != null) audioSource.dispose();
-        if (factory != null) factory.dispose();
+
+        for (Map.Entry<String, PeerConnection> entry : peerConnections.entrySet()) {
+            entry.getValue().dispose();
+        }
+        peerConnections.clear();
+
+        if (localAudioTrack != null) {
+            localAudioTrack.dispose();
+            localAudioTrack = null;
+        }
+        if (audioSource != null) {
+            audioSource.dispose();
+            audioSource = null;
+        }
+        if (factory != null) {
+            factory.dispose();
+            factory = null;
+        }
     }
 
     private class SimpleSdpObserver implements SdpObserver {

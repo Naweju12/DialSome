@@ -15,6 +15,7 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     this->m_storage = new SecureStorage(parent);
     this->m_google = new Google(this, this->m_storage);
     this->m_settings = new Settings(this);
+    this->m_myEmail = this->m_storage->get("email");
 
     QString historyJson = m_storage->get("call_history");
     if (!historyJson.isEmpty()) {
@@ -168,6 +169,8 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     });
 
     connect(this, &Backend::loginFinished, this, [this](const QString &email, const QString &displayName, const QString &userID, const QString &refresh_token) {
+        this->m_myEmail = email;
+        this->m_storage->save("email", email);
         this->m_storage->saveRefreshToken(refresh_token);
         this->m_storage->save("id", userID); 
 
@@ -203,13 +206,16 @@ Backend::Backend(QObject *parent) : QObject(parent) {
 
 extern "C" {
 JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onLocalIceCandidate(
-    JNIEnv* env, jobject, jstring sdp, jstring mid, jint index) {
+    JNIEnv* env, jobject, jstring peerEmail, jstring sdp, jstring mid, jint index) {
     if (!s_instance) return;
+    QString email = QJniObject(peerEmail).toString();
     QString sdpStr = QJniObject(sdp).toString();
     QString midStr = QJniObject(mid).toString();
     QMetaObject::invokeMethod(s_instance, [=]() {
         QJsonObject json;
         json["type"] = "candidate";
+        json["sender"] = s_instance->myEmail();
+        json["target"] = email;
         json["sdp"] = sdpStr;
         json["sdpMid"] = midStr;
         json["sdpMLineIndex"] = (int)index;
@@ -218,30 +224,34 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onLocalI
 }
 
 JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onLocalSdp(
-    JNIEnv* env, jobject, jstring sdp, jstring type) {
+    JNIEnv* env, jobject, jstring peerEmail, jstring sdp, jstring type) {
     if (!s_instance) return;
+    QString email = QJniObject(peerEmail).toString();
     QString sdpStr = QJniObject(sdp).toString();
     QString typeStr = QJniObject(type).toString();
     QMetaObject::invokeMethod(s_instance, [=]() {
         QJsonObject json;
         json["type"] = typeStr;
+        json["sender"] = s_instance->myEmail();
+        json["target"] = email;
         json["sdp"] = sdpStr;
         s_instance->handleLocalSdp(json);
     }, Qt::QueuedConnection);
 }
 
-JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallEstablished(JNIEnv*, jobject) {
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallEstablished(JNIEnv* env, jobject, jstring peerEmail) {
     if (!s_instance) return;
+    QString email = QJniObject(peerEmail).toString();
     QMetaObject::invokeMethod(s_instance, [=]() {
-        s_instance->setMessage("Call Connected! Audio is live.");
+        s_instance->addActivePeer(email);
     }, Qt::QueuedConnection);
 }
 
-JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDisconnected(JNIEnv*, jobject) {
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_WebRTCManager_onCallDisconnected(JNIEnv* env, jobject, jstring peerEmail) {
     if (!s_instance) return;
+    QString email = QJniObject(peerEmail).toString();
     QMetaObject::invokeMethod(s_instance, [=]() {
-        qDebug() << "Call disconnected via WebRTC ICE state change";
-        s_instance->endCall();
+        s_instance->removeActivePeer(email);
     }, Qt::QueuedConnection);
 }
 
@@ -309,8 +319,6 @@ void Backend::startCall(const QString &email) {
 
                 if (m_webrtc.isValid()) {
                     m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
-                    // Pre-initialize PC so tracks are ready
-                    m_webrtc.callMethod<void>("createPeerConnection");
                 }
             }, Qt::SingleShotConnection);
 
@@ -351,7 +359,6 @@ void Backend::joinCall(const QString &roomId, const QString &email, const QStrin
                 this->m_callerName = roomName;
                 emit this->callerInfoChanged();
                 m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
-                m_webrtc.callMethod<void>("createPeerConnection");
             }
         });
     #endif
@@ -361,6 +368,9 @@ void Backend::onConnected() {
     setMessage("Signaling connected. Waiting for peer...");
     QJsonObject joinJson;
     joinJson["type"] = "join";
+    joinJson["sender"] = this->m_myEmail;
+    joinJson["email"] = this->m_myEmail;
+    joinJson["name"] = "Me";
     m_webSocket.sendTextMessage(QJsonDocument(joinJson).toJson(QJsonDocument::Compact));
 }
 
@@ -378,25 +388,81 @@ void Backend::onTextMessageReceived(const QString &message) {
     QJsonDocument doc = QJsonDocument::fromJson(message.toUtf8());
     QJsonObject json = doc.object();
     QString type = json["type"].toString();
+    QString sender = json["sender"].toString();
+    QString target = json["target"].toString();
+
+    // 1. If targeted message and not for us, ignore it
+    if (json.contains("target") && !target.isEmpty() && target != this->m_myEmail) {
+        return;
+    }
 
     if (type == "join") {
-        if (this->m_isCaller) {
-            setMessage("Peer joined. Sending Offer...");
-            m_webrtc.callMethod<void>("createOffer");
-        } else {
-            setMessage("Joined room. Waiting for caller...");
+        if (sender == this->m_myEmail) return; // ignore our own broadcast
+        
+        qDebug() << "Peer joined:" << sender;
+        
+        // Dynamic Peer Connection creation
+        if (m_webrtc.isValid()) {
+            m_webrtc.callMethod<void>("createPeerConnection", "(Ljava/lang/String;)V", QJniObject::fromString(sender).object());
         }
-    } else if (type == "offer" || type == "answer") {
-        m_webrtc.callMethod<void>("handleRemoteSdp",
-                                  "(Ljava/lang/String;Ljava/lang/String;)V",
-                                  QJniObject::fromString(json["sdp"].toString()).object(),
-                                  QJniObject::fromString(type).object());
-    } else if (type == "candidate") {
-        m_webrtc.callMethod<void>("addRemoteIceCandidate",
-                                  "(Ljava/lang/String;Ljava/lang/String;I)V",
-                                  QJniObject::fromString(json["sdp"].toString()).object(),
-                                  QJniObject::fromString(json["sdpMid"].toString()).object(),
-                                  json["sdpMLineIndex"].toInt());
+        
+        // Lexicographical sorting rule to determine who creates the offer.
+        // The lexicographically smaller email address initiates the offer.
+        if (this->m_myEmail < sender) {
+            setMessage("Sending offer to " + sender);
+            if (m_webrtc.isValid()) {
+                m_webrtc.callMethod<void>("createOffer", "(Ljava/lang/String;)V", QJniObject::fromString(sender).object());
+            }
+        } else {
+            // Send welcome back so they can create a PeerConnection for us
+            QJsonObject welcomeJson;
+            welcomeJson["type"] = "welcome";
+            welcomeJson["sender"] = this->m_myEmail;
+            welcomeJson["target"] = sender;
+            m_webSocket.sendTextMessage(QJsonDocument(welcomeJson).toJson(QJsonDocument::Compact));
+            setMessage("Welcomed peer: " + sender);
+        }
+    }
+    else if (type == "welcome") {
+        if (sender == this->m_myEmail) return; // ignore our own welcome
+        
+        qDebug() << "Received welcome from:" << sender;
+        
+        // Create Peer Connection for the welcoming peer
+        if (m_webrtc.isValid()) {
+            m_webrtc.callMethod<void>("createPeerConnection", "(Ljava/lang/String;)V", QJniObject::fromString(sender).object());
+        }
+        
+        if (this->m_myEmail < sender) {
+            setMessage("Sending offer to " + sender);
+            if (m_webrtc.isValid()) {
+                m_webrtc.callMethod<void>("createOffer", "(Ljava/lang/String;)V", QJniObject::fromString(sender).object());
+            }
+        }
+    }
+    else if (type == "offer" || type == "answer") {
+        if (m_webrtc.isValid()) {
+            // Dynamically create PeerConnection on demand if it doesn't exist yet
+            if (type == "offer") {
+                m_webrtc.callMethod<void>("createPeerConnection", "(Ljava/lang/String;)V", QJniObject::fromString(sender).object());
+            }
+            
+            m_webrtc.callMethod<void>("handleRemoteSdp",
+                                      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
+                                      QJniObject::fromString(sender).object(),
+                                      QJniObject::fromString(json["sdp"].toString()).object(),
+                                      QJniObject::fromString(type).object());
+        }
+    }
+    else if (type == "candidate") {
+        if (m_webrtc.isValid()) {
+            m_webrtc.callMethod<void>("addRemoteIceCandidate",
+                                      "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V",
+                                      QJniObject::fromString(sender).object(),
+                                      QJniObject::fromString(json["sdp"].toString()).object(),
+                                      QJniObject::fromString(json["sdpMid"].toString()).object(),
+                                      json["sdpMLineIndex"].toInt());
+        }
     }
 }
 
@@ -521,20 +587,54 @@ void Backend::endCall() {
     }
     #endif
 
+    this->m_activePeers.clear();
     this->m_callerEmail = ""; 
     this->m_callerName = "";
     this->m_isCaller = false;
 
     qDebug() << "Call Ended";
     emit this->callEnded();
+    emit this->callerInfoChanged();
 }
 
 QString Backend::callerEmail() const {
+    if (!m_activePeers.isEmpty()) {
+        return m_activePeers.join(", ");
+    }
     return this->m_callerEmail;
 }
 
 QString Backend::callerName() const {
+    if (!m_activePeers.isEmpty()) {
+        return m_activePeers.join(", ");
+    }
     return this->m_callerName;
+}
+
+void Backend::addActivePeer(const QString &email) {
+    if (!m_activePeers.contains(email)) {
+        m_activePeers.append(email);
+        emit callerInfoChanged();
+    }
+    setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
+}
+
+void Backend::removeActivePeer(const QString &email) {
+    if (m_activePeers.contains(email)) {
+        m_activePeers.removeAll(email);
+        emit callerInfoChanged();
+    }
+    #ifdef Q_OS_ANDROID
+    if (m_webrtc.isValid()) {
+        m_webrtc.callMethod<void>("closePeer", "(Ljava/lang/String;)V", QJniObject::fromString(email).object());
+    }
+    #endif
+    if (m_activePeers.isEmpty()) {
+        setMessage("All peers disconnected.");
+        endCall();
+    } else {
+        setMessage("Peer disconnected. Active peers: " + m_activePeers.join(", "));
+    }
 }
 
 QString Backend::serverUrl() const { 

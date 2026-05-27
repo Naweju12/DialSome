@@ -34,48 +34,64 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str):
 async def call_person(
   data: voice.VoiceData, user_id: str = Depends(authenticate.verify_jwt)
 ):
-  current_user, target_user = await asyncio.gather(
-    User.get_or_none(id=user_id), User.get_or_none(email=data.email)
-  )
-
+  current_user = await User.get_or_none(id=user_id)
   if current_user is None:
     return JSONResponse(
       content={"status": False, "message": "Invalid Session"},
       status_code=status.HTTP_401_UNAUTHORIZED,
     )
 
-  if target_user is None or target_user.fcm_token is None:
+  emails = [e.strip() for e in data.email.split(",") if e.strip()]
+  if not emails:
     return JSONResponse(
-      content={"status": False, "message": "User not found"},
-      status_code=status.HTTP_404_NOT_FOUND,
+      content={"status": False, "message": "No emails provided"},
+      status_code=status.HTTP_400_BAD_REQUEST,
     )
 
-  is_permitted = await Contact.filter(
-    owner_id=target_user.id, contact_user_id=current_user.id
-  ).exists()
-
-  if not is_permitted:
+  if len(emails) > 4:
     return JSONResponse(
-      content={
-        "status": False,
-        "message": "User privacy settings do not allow calls from non-contacts",
-      },
-      status_code=status.HTTP_403_FORBIDDEN,
+      content={"status": False, "message": "Group call is limited to a maximum of 5 participants."},
+      status_code=status.HTTP_400_BAD_REQUEST,
     )
 
   room_id = str(uuid.uuid7())
-  payload = {
-    "type": "incoming_call",
-    "room_id": room_id,
-    "caller_email": current_user.email,
-    "caller_name": current_user.firstname,
-  }
-  await fcm.send_fcm_notification(target_user.fcm_token, payload)
+  invited_users = []
+  
+  for email in emails:
+    target_user = await User.get_or_none(email=email)
+    if target_user is None or target_user.fcm_token is None:
+      continue
+
+    is_permitted = await Contact.filter(
+      owner_id=target_user.id, contact_user_id=current_user.id
+    ).exists()
+
+    if not is_permitted:
+      continue
+
+    payload = {
+      "type": "incoming_call",
+      "room_id": room_id,
+      "caller_email": current_user.email,
+      "caller_name": current_user.firstname,
+      "is_group": "true" if len(emails) > 1 else "false",
+      "participants": ",".join(emails + [current_user.email])
+    }
+    await fcm.send_fcm_notification(target_user.fcm_token, payload)
+    invited_users.append(target_user.firstname)
+
+  if not invited_users:
+    return JSONResponse(
+      content={"status": False, "message": "No valid contacts could be reached"},
+      status_code=status.HTTP_404_NOT_FOUND,
+    )
+
+  room_name = ", ".join(invited_users)
   return JSONResponse(
     content={
       "status": True,
-      "message": "Offer sent successfully",
-      "data": {"room_id": room_id, "room_name": target_user.firstname},
+      "message": "Group call initialized",
+      "data": {"room_id": room_id, "room_name": room_name},
     },
     status_code=status.HTTP_200_OK,
   )
@@ -85,29 +101,25 @@ async def call_person(
 async def end_call(
   data: voice.VoiceData, user_id: str = Depends(authenticate.verify_jwt)
 ):
-  current_user, target_user = await asyncio.gather(
-    User.get_or_none(id=user_id), User.get_or_none(email=data.email)
-  )
-
+  current_user = await User.get_or_none(id=user_id)
   if current_user is None:
     return JSONResponse(
       content={"status": False, "message": "Invalid Session"},
       status_code=status.HTTP_401_UNAUTHORIZED,
     )
 
-  if target_user is None or target_user.fcm_token is None:
-    return JSONResponse(
-      content={"status": False, "message": "User not found"},
-      status_code=status.HTTP_404_NOT_FOUND,
-    )
+  emails = [e.strip() for e in data.email.split(",") if e.strip()]
+  for email in emails:
+    target_user = await User.get_or_none(email=email)
+    if target_user and target_user.fcm_token:
+      payload = {
+        "type": "end_call",
+        "to": email,
+        "caller_email": current_user.email,
+        "caller_name": current_user.firstname,
+      }
+      await fcm.send_fcm_notification(target_user.fcm_token, payload)
 
-  payload = {
-    "type": "end_call",
-    "to": data.email,
-    "caller_email": current_user.email,
-    "caller_name": current_user.firstname,
-  }
-  await fcm.send_fcm_notification(target_user.fcm_token, payload)
   return JSONResponse(
     content={"status": True, "message": "Call ended successfully"},
     status_code=status.HTTP_200_OK,
