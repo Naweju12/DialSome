@@ -49,84 +49,127 @@ ColumnLayout {
         Layout.fillHeight: true
     }
 
-    RowLayout {
+    ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
         Layout.bottomMargin: 60
-        spacing: 80 // Space between the two buttons
+        spacing: 30
 
-        // ACCEPT BUTTON (Green)
+        // 1. Swipe to Answer slider track
         Rectangle {
-            id: acceptCallBtn
-            color: "#4CAF50" // Material Green
-            height: 70
-            width: 70
-            radius: 35 // Make it a perfect circle
+            id: slideTrack
+            width: 320
+            height: 72
+            radius: 36
+            color: Qt.rgba(255, 255, 255, 0.08)
+            border.color: Qt.rgba(255, 255, 255, 0.12)
+            border.width: 1
 
-            // Optional: Add a pulse animation to draw attention
-            SequentialAnimation on opacity {
-                loops: Animation.Infinite
-                NumberAnimation {
-                    to: 0.7
-                    duration: 800
-                }
-                NumberAnimation {
-                    to: 1.0
-                    duration: 800
+            // Shimmering instruction text
+            Text {
+                id: slideText
+                text: "slide to answer"
+                color: Qt.rgba(255, 255, 255, 0.6)
+                font.pixelSize: 16
+                font.letterSpacing: 1
+                anchors.centerIn: parent
+                anchors.horizontalCenterOffset: 20 // Offset right to center in the remaining track space
+
+                // Smooth shimmering pulse animation
+                SequentialAnimation on opacity {
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 0.2; duration: 1200; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 0.8; duration: 1200; easing.type: Easing.InOutSine }
                 }
             }
 
-            Image {
-                source: "../icons/dial.png"
-                sourceSize.width: 40
-                sourceSize.height: 40
-                anchors.centerIn: parent
-                // 0 degree rotation points up/right (standard for accept)
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+            // Green slide handle
+            Rectangle {
+                id: slideHandle
+                x: 4
+                y: 4
+                width: 64
+                height: 64
+                radius: 32
+                color: "#4CAF50" // iOS-style Emerald Green
+
+                Image {
+                    source: "../icons/dial.png"
+                    sourceSize.width: 32
+                    sourceSize.height: 32
+                    anchors.centerIn: parent
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+
+                // Snap-back animation when released early
+                Behavior on x {
+                    id: snapBackBehavior
+                    enabled: !dragArea.drag.active
+                    NumberAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+                }
             }
 
             MouseArea {
+                id: dragArea
                 anchors.fill: parent
-                onClicked: {
-                    // Assuming you will add an acceptCall() method to your C++ backend
-                    myBackend.acceptCall();
-                }
+                drag.target: slideHandle
+                drag.axis: Drag.XAxis
+                drag.minimumX: 4
+                drag.maximumX: slideTrack.width - slideHandle.width - 4
 
-                // Visual feedback on press
-                onPressed: acceptCallBtn.color = "#388E3C"
-                onReleased: acceptCallBtn.color = "#4CAF50"
+                onReleased: {
+                    if (slideHandle.x >= drag.maximumX - 8) {
+                        // Accept Call!
+                        myBackend.acceptCall();
+                    }
+                }
             }
         }
 
-        // 2. REJECT BUTTON (Red)
-        Rectangle {
-            id: endCallBtn
-            color: "#F44336" // Material Red
-            height: 70
-            width: 70
-            radius: 35
+        // 2. Decline Button Section
+        ColumnLayout {
+            spacing: 8
+            Layout.alignment: Qt.AlignHCenter
 
-            Image {
-                source: "../icons/dial.png"
-                sourceSize.width: 40
-                sourceSize.height: 40
-                anchors.centerIn: parent
-                rotation: 135 // Turned downwards to indicate hanging up
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
-            }
+            Rectangle {
+                id: declineBtn
+                color: "#F44336" // iOS-style Crimson Red
+                height: 60
+                width: 60
+                radius: 30
+                Layout.alignment: Qt.AlignHCenter
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    myBackend.endCall();
+                Image {
+                    source: "../icons/dial.png"
+                    sourceSize.width: 32
+                    sourceSize.height: 32
+                    anchors.centerIn: parent
+                    rotation: 135 // Turned down to hang up orientation
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
                 }
 
-                // Visual feedback on press
-                onPressed: endCallBtn.color = "#D32F2F"
-                onReleased: endCallBtn.color = "#F44336"
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        myBackend.endCall();
+                    }
+                    onPressed: declineBtn.color = "#D32F2F"
+                    onReleased: declineBtn.color = "#F44336"
+                }
+            }
+
+            Text {
+                text: "Decline"
+                color: "#B0B0B0"
+                font.pixelSize: 13
+                font.bold: true
+                Layout.alignment: Qt.AlignHCenter
             }
         }
     }
