@@ -119,9 +119,16 @@ public class WebRTCManager {
         if (pc != null) {
             Log.d(TAG, "Setting peer muted: " + peerEmail + " = " + mute);
             for (RtpSender sender : pc.getSenders()) {
-                MediaStreamTrack track = sender.track();
-                if (track != null && track.kind().equals("audio")) {
-                    sender.setTrack(mute ? null : localAudioTrack, false);
+                if (mute) {
+                    MediaStreamTrack track = sender.track();
+                    if (track != null && track.kind().equals("audio")) {
+                        sender.setTrack(null, false);
+                    }
+                } else {
+                    MediaStreamTrack track = sender.track();
+                    if (track == null || track.kind().equals("audio")) {
+                        sender.setTrack(localAudioTrack, false);
+                    }
                 }
             }
         }
