@@ -4,7 +4,11 @@ import QtQuick.Controls
 
 Rectangle {
     id: windowRoot
-    color: "#000000"
+    color: Theme.background
+
+    Behavior on color {
+        ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
+    }
 
     ColumnLayout {
         id: settingsPage
@@ -21,49 +25,163 @@ Rectangle {
             ColumnLayout {
                 id: myLayout
                 width: settingsPage.width
-                spacing: 5
+                spacing: 12
 
                 // --- HEADER ---
-                Rectangle {
+                RowLayout {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 70
-                    color: "transparent"
+                    Layout.leftMargin: 20
+                    Layout.rightMargin: 20
+                    spacing: 12
+
+                    // Back button
+                    Rectangle {
+                        width: 40
+                        height: 40
+                        radius: 12
+                        color: backArea.pressed ? Theme.cardHover : Theme.surfaceVariant
+
+                        Text {
+                            text: "‹"
+                            color: Theme.textPrimary
+                            font.pixelSize: 24
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            id: backArea
+                            anchors.fill: parent
+                            onClicked: mainStack.pop()
+                            onPressed: parent.scale = 0.9
+                            onReleased: parent.scale = 1.0
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
                     Text {
                         text: "Settings"
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.leftMargin: 20
-                        color: "white"
-                        font.bold: true
+                        color: Theme.textPrimary
+                        font.weight: Font.DemiBold
                         font.pixelSize: 22
+                        Layout.fillWidth: true
                     }
                 }
 
-                // --- SERVER ROW ---
-                Rectangle {
-                    id: serverRow
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 90
-                    color: "transparent"
+                // --- APPEARANCE SECTION ---
+                Text {
+                    text: "APPEARANCE"
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                    Layout.leftMargin: 20
+                    Layout.topMargin: 8
+                }
 
-                    Rectangle {
-                        anchors.fill: parent
-                        color: "white"
-                        opacity: serverMouseArea.pressed ? 0.1 : 0
-                    }
+                // Theme Toggle Row
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 72
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 12
+                    radius: 16
+                    color: Theme.card
+                    border.color: Theme.border
+                    border.width: 1
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 20
-                        anchors.rightMargin: 20
-                        spacing: 15
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 14
 
-                        Image {
-                            source: "../icons/server.png"
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
-                            fillMode: Image.PreserveAspectFit
-                            sourceSize: Qt.size(64, 64)
+                        // Moon/Sun icon
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 12
+                            color: Theme.accentSoft
+
+                            Text {
+                                text: Theme.isDark ? "🌙" : "☀️"
+                                font.pixelSize: 20
+                                anchors.centerIn: parent
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+
+                            Text {
+                                text: "Dark Mode"
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 16
+                            }
+
+                            Text {
+                                text: Theme.isDark ? "Dark theme active" : "Light theme active"
+                                color: Theme.textSecondary
+                                font.pixelSize: 13
+                            }
+                        }
+
+                        Switch {
+                            id: themeSwitch
+                            checked: Theme.isDark
+                            onToggled: Theme.toggleTheme()
+                        }
+                    }
+                }
+
+                // --- CONNECTION SECTION ---
+                Text {
+                    text: "CONNECTION"
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                    Layout.leftMargin: 20
+                    Layout.topMargin: 16
+                }
+
+                // Server Configuration Row
+                Rectangle {
+                    id: serverRow
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 80
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 12
+                    radius: 16
+                    color: Theme.card
+                    border.color: Theme.border
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 14
+
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 12
+                            color: Theme.accentSoft
+
+                            Image {
+                                source: "../icons/server.png"
+                                Layout.preferredWidth: 22
+                                Layout.preferredHeight: 22
+                                sourceSize: Qt.size(22, 22)
+                                anchors.centerIn: parent
+                                fillMode: Image.PreserveAspectFit
+                            }
                         }
 
                         ColumnLayout {
@@ -72,8 +190,8 @@ Rectangle {
 
                             Text {
                                 text: "Server Configuration"
-                                color: "white"
-                                font.bold: true
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
                                 font.pixelSize: 16
                             }
 
@@ -83,44 +201,55 @@ Rectangle {
 
                                 Text {
                                     text: myBackend.serverUrl
-                                    color: "#bdc3c7"
-                                    font.pixelSize: 14
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 13
                                     Layout.fillWidth: true
                                     elide: Text.ElideRight
                                 }
 
                                 Rectangle {
                                     visible: myBackend.useHttps
-                                    implicitWidth: 46
-                                    implicitHeight: 18
-                                    color: "#163117"
-                                    border.color: "#4CAF50"
-                                    radius: 4
+                                    implicitWidth: 48
+                                    implicitHeight: 20
+                                    color: Theme.successSoft
+                                    border.color: Theme.success
+                                    border.width: 1
+                                    radius: 6
+
                                     Text {
                                         anchors.centerIn: parent
                                         text: "HTTPS"
-                                        color: "#4CAF50"
+                                        color: Theme.success
                                         font.pixelSize: 9
-                                        font.bold: true
+                                        font.weight: Font.DemiBold
                                     }
                                 }
 
                                 Rectangle {
                                     visible: myBackend.useWss
-                                    implicitWidth: 38
-                                    implicitHeight: 18
-                                    color: "#0d2135"
-                                    border.color: "#2196F3"
-                                    radius: 4
+                                    implicitWidth: 40
+                                    implicitHeight: 20
+                                    color: Theme.accentSoft
+                                    border.color: Theme.accent
+                                    border.width: 1
+                                    radius: 6
+
                                     Text {
                                         anchors.centerIn: parent
                                         text: "WSS"
-                                        color: "#2196F3"
+                                        color: Theme.accent
                                         font.pixelSize: 9
-                                        font.bold: true
+                                        font.weight: Font.DemiBold
                                     }
                                 }
                             }
+                        }
+
+                        // Chevron
+                        Text {
+                            text: "›"
+                            color: Theme.textSecondary
+                            font.pixelSize: 22
                         }
                     }
 
@@ -128,13 +257,81 @@ Rectangle {
                         id: serverMouseArea
                         anchors.fill: parent
                         onClicked: serverPopup.open()
+                        onPressed: parent.color = Theme.cardHover
+                        onReleased: parent.color = Theme.card
                     }
+                }
+
+                // --- ABOUT SECTION ---
+                Text {
+                    text: "ABOUT"
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                    Layout.leftMargin: 20
+                    Layout.topMargin: 16
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 60
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 12
+                    radius: 16
+                    color: Theme.card
+                    border.color: Theme.border
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 14
+
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 12
+                            color: Theme.accentSoft
+
+                            Image {
+                                source: "../icons/logo.png"
+                                sourceSize: Qt.size(22, 22)
+                                anchors.centerIn: parent
+                                fillMode: Image.PreserveAspectFit
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: "DialSome"
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 16
+                            }
+
+                            Text {
+                                text: "Version 1.0"
+                                color: Theme.textSecondary
+                                font.pixelSize: 13
+                            }
+                        }
+                    }
+                }
+
+                // Bottom spacer
+                Item {
+                    Layout.preferredHeight: 30
                 }
             }
         }
     }
 
-    // --- POPUP MODAL ---
+    // --- SERVER EDIT POPUP ---
     Popup {
         id: serverPopup
         parent: Overlay.overlay
@@ -146,10 +343,10 @@ Rectangle {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         background: Rectangle {
-            color: "#2c3e50"
-            radius: 16
-            border.color: "#34495e"
-            border.width: 2
+            color: Theme.popupBackground
+            radius: 20
+            border.color: Theme.popupBorder
+            border.width: 1
         }
 
         contentItem: ColumnLayout {
@@ -157,8 +354,8 @@ Rectangle {
 
             Text {
                 text: "Edit Connection"
-                color: "white"
-                font.bold: true
+                color: Theme.textPrimary
+                font.weight: Font.DemiBold
                 font.pixelSize: 20
                 Layout.alignment: Qt.AlignHCenter
                 bottomPadding: 5
@@ -167,35 +364,39 @@ Rectangle {
             TextField {
                 id: serverInput
                 placeholderText: "Enter Host/IP (e.g. 192.168.1.1)"
+                placeholderTextColor: Theme.textSecondary
                 text: myBackend.serverUrl
                 Layout.fillWidth: true
-                color: "white"
+                color: Theme.textPrimary
+                font.pixelSize: 14
 
-                // Allow letters, numbers, dots, and hyphens (basic URL/IP validation)
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z0-9\.\-:]+/
                 }
 
                 background: Rectangle {
                     implicitHeight: 48
-                    color: "#34495e"
-                    radius: 8
-                    border.color: serverInput.activeFocus ? "#4CAF50" : "transparent"
+                    color: Theme.inputBackground
+                    radius: 12
+                    border.color: serverInput.activeFocus ? Theme.inputFocusBorder : Theme.inputBorder
+                    border.width: 1
                 }
             }
 
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 10
+                spacing: 12
 
                 RowLayout {
                     Layout.fillWidth: true
+
                     Text {
                         text: "Use Secure HTTPS"
-                        color: "white"
+                        color: Theme.textPrimary
                         Layout.fillWidth: true
                         font.pixelSize: 14
                     }
+
                     Switch {
                         id: httpsSwitch
                         checked: myBackend.useHttps
@@ -204,12 +405,14 @@ Rectangle {
 
                 RowLayout {
                     Layout.fillWidth: true
+
                     Text {
                         text: "Use WebSockets (WSS)"
-                        color: "white"
+                        color: Theme.textPrimary
                         Layout.fillWidth: true
                         font.pixelSize: 14
                     }
+
                     Switch {
                         id: wssSwitch
                         checked: myBackend.useWss
@@ -221,34 +424,62 @@ Rectangle {
                 Layout.fillWidth: true
                 spacing: 12
 
-                Button {
-                    text: "Cancel"
+                // Cancel button
+                Rectangle {
                     Layout.fillWidth: true
-                    flat: true
-                    onClicked: serverPopup.close()
-                }
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: cancelServerArea.pressed ? Theme.cardHover : Theme.buttonSecondary
 
-                Button {
-                    id: saveBtn
-                    text: "Save Changes"
-                    Layout.fillWidth: true
-                    highlighted: true
-
-                    // Button is only enabled if input is not empty
-                    enabled: serverInput.text.length > 0
-
-                    background: Rectangle {
-                        // Turns gray if disabled, green if enabled
-                        color: !saveBtn.enabled ? "#555555" : (saveBtn.pressed ? "#388E3C" : "#4CAF50")
-                        radius: 8
-                        opacity: saveBtn.enabled ? 1.0 : 0.5
+                    Text {
+                        text: "Cancel"
+                        color: Theme.buttonSecondaryText
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
                     }
 
-                    onClicked: {
-                        myBackend.serverUrl = serverInput.text
-                        myBackend.useHttps = httpsSwitch.checked
-                        myBackend.useWss = wssSwitch.checked
-                        serverPopup.close();
+                    MouseArea {
+                        id: cancelServerArea
+                        anchors.fill: parent
+                        onClicked: serverPopup.close()
+                    }
+                }
+
+                // Save button
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: !saveBtnEnabled ? Theme.buttonSecondary
+                         : saveServerArea.pressed ? Qt.darker(Theme.success, 1.2)
+                         : Theme.success
+                    opacity: saveBtnEnabled ? 1.0 : 0.5
+
+                    property bool saveBtnEnabled: serverInput.text.length > 0
+
+                    Text {
+                        text: "Save Changes"
+                        color: parent.saveBtnEnabled ? "#FFFFFF" : Theme.textSecondary
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: saveServerArea
+                        anchors.fill: parent
+                        enabled: parent.saveBtnEnabled
+                        onClicked: {
+                            myBackend.serverUrl = serverInput.text
+                            myBackend.useHttps = httpsSwitch.checked
+                            myBackend.useWss = wssSwitch.checked
+                            serverPopup.close();
+                        }
+                    }
+
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
                     }
                 }
             }

@@ -10,10 +10,14 @@ ApplicationWindow {
     width: 360
     height: 640
     title: "DialSome"
-    color: "#000000"
+    color: Theme.background
 
     leftPadding: 15
     rightPadding: 15
+
+    Behavior on color {
+        ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
+    }
 
     Backend {
         id: myBackend

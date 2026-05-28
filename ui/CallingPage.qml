@@ -41,34 +41,61 @@ ColumnLayout {
         }
     }
 
+    // --- CALLER INFO ---
     Rectangle {
         id: titleSection
         Layout.fillWidth: true
         Layout.preferredHeight: 80
         Layout.topMargin: 50
-
         color: "transparent"
-        border.width: 1
 
         ColumnLayout {
             anchors.fill: parent
+            spacing: 12
 
-            Image {
-                source: "../icons/user.png"
-                sourceSize.width: 80
-                sourceSize.height: 80
+            // Avatar with subtle ring
+            Rectangle {
                 Layout.alignment: Qt.AlignHCenter
+                width: 88
+                height: 88
+                radius: 44
+                color: "transparent"
+                border.color: Theme.accent
+                border.width: 2
 
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 80
+                    height: 80
+                    radius: 40
+                    color: Theme.surfaceVariant
+
+                    Image {
+                        source: "../icons/user.png"
+                        sourceSize.width: 80
+                        sourceSize.height: 80
+                        anchors.centerIn: parent
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
+                    }
+                }
+
+                // Pulsing ring when connected
+                SequentialAnimation on border.width {
+                    running: myBackend.callConnected
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 3; duration: 1000; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 1.5; duration: 1000; easing.type: Easing.InOutSine }
+                }
             }
 
             Text {
                 text: myBackend.callerName
-                color: "#FFFFFF"
+                color: Theme.textPrimary
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: myBackend.callerName.indexOf(",") !== -1 ? 18 : 30
+                font.pixelSize: myBackend.callerName.indexOf(",") !== -1 ? 18 : 28
+                font.weight: Font.DemiBold
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 Layout.preferredWidth: parent.width * 0.9
@@ -76,143 +103,218 @@ ColumnLayout {
 
             Text {
                 text: myBackend.message
-                color: "#808080"
+                color: Theme.textSecondary
                 Layout.alignment: Qt.AlignHCenter
-
                 font.pixelSize: 15
             }
 
             Text {
                 text: callPage.formatDuration(callPage.callDuration)
-                color: "#2ecc71" // Emerald green call active color
+                color: Theme.success
                 Layout.alignment: Qt.AlignHCenter
                 font.pixelSize: 18
-                font.bold: true
+                font.weight: Font.DemiBold
                 visible: myBackend.callConnected
             }
         }
     }
 
-    // Push everything to the top
+    // Push to top
     Item {
         Layout.fillHeight: true
     }
 
+    // --- ACTION BUTTONS ---
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
         Layout.bottomMargin: 25
-        spacing: 25
+        spacing: 20
 
-        // Speaker Toggle Button
-        Rectangle {
-            id: speakerBtn
-            color: myBackend.speakerOn ? "#FFFFFF" : "#4A4A4A"
-            height: 60
-            width: height
-            radius: height / 2
+        // Speaker Toggle
+        ColumnLayout {
+            spacing: 6
+            Layout.alignment: Qt.AlignHCenter
 
-            Image {
-                // Dynamically change the icon based on the state
-                source: myBackend.speakerOn ? "../icons/volume_on.png" : "../icons/volume_off.png"
-                sourceSize.width: 30
-                sourceSize.height: 30
-                anchors.centerIn: parent
+            Rectangle {
+                id: speakerBtn
+                color: myBackend.speakerOn ? Theme.actionButtonActive : Theme.actionButton
+                height: 60
+                width: 60
+                radius: 18
+                Layout.alignment: Qt.AlignHCenter
 
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+                Image {
+                    source: myBackend.speakerOn ? "../icons/volume_on.png" : "../icons/volume_off.png"
+                    sourceSize.width: 26
+                    sourceSize.height: 26
+                    anchors.centerIn: parent
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: myBackend.setSpeakerOn(!myBackend.speakerOn)
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on color {
+                    ColorAnimation { duration: 200 }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    myBackend.setSpeakerOn(!myBackend.speakerOn);
-                }
+            Text {
+                text: "Speaker"
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignHCenter
             }
         }
 
-        // Microphone Mute Button
-        Rectangle {
-            id: micMuteBtn
-            color: myBackend.micMuted ? "#FFFFFF" : "#4A4A4A"
-            height: 60
-            width: height
-            radius: height / 2
+        // Mic Mute
+        ColumnLayout {
+            spacing: 6
+            Layout.alignment: Qt.AlignHCenter
 
-            Image {
-                source: myBackend.micMuted ? "../icons/mic_off.png" : "../icons/mic_on.png"
-                sourceSize.width: 30
-                sourceSize.height: 30
-                anchors.centerIn: parent
+            Rectangle {
+                id: micMuteBtn
+                color: myBackend.micMuted ? Theme.actionButtonActive : Theme.actionButton
+                height: 60
+                width: 60
+                radius: 18
+                Layout.alignment: Qt.AlignHCenter
 
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+                Image {
+                    source: myBackend.micMuted ? "../icons/mic_off.png" : "../icons/mic_on.png"
+                    sourceSize.width: 26
+                    sourceSize.height: 26
+                    anchors.centerIn: parent
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: myBackend.setMicMuted(!myBackend.micMuted)
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on color {
+                    ColorAnimation { duration: 200 }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    myBackend.setMicMuted(!myBackend.micMuted);
-                }
+            Text {
+                text: "Mute"
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignHCenter
             }
         }
 
-        // Add Call (Invite) Button
-        Rectangle {
-            id: addCallBtn
-            color: "#4A4A4A"
-            height: 60
-            width: height
-            radius: height / 2
+        // Add Call
+        ColumnLayout {
+            spacing: 6
+            Layout.alignment: Qt.AlignHCenter
 
-            Image {
-                source: "../icons/add.png"
-                sourceSize.width: 30
-                sourceSize.height: 30
-                anchors.centerIn: parent
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+            Rectangle {
+                id: addCallBtn
+                color: Theme.actionButton
+                height: 60
+                width: 60
+                radius: 18
+                Layout.alignment: Qt.AlignHCenter
+
+                Image {
+                    source: "../icons/add.png"
+                    sourceSize.width: 26
+                    sourceSize.height: 26
+                    anchors.centerIn: parent
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: mainStack.push(selectContactPageComponent)
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    mainStack.push(selectContactPageComponent);
-                }
+            Text {
+                text: "Add"
+                color: Theme.textSecondary
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignHCenter
             }
         }
 
-        // End Call Button
-        Rectangle {
-            id: endCallBtn
-            color: "red"
-            height: 60
-            width: height
-            radius: height / 2
+        // End Call
+        ColumnLayout {
+            spacing: 6
+            Layout.alignment: Qt.AlignHCenter
 
-            Image {
-                source: "../icons/dial.png"
-                sourceSize.width: 35
-                sourceSize.height: 35
-                anchors.centerIn: parent
-                rotation: 135
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+            Rectangle {
+                id: endCallBtn
+                color: endCallArea.pressed ? Qt.darker(Theme.danger, 1.2) : Theme.danger
+                height: 60
+                width: 60
+                radius: 18
+                Layout.alignment: Qt.AlignHCenter
+
+                Image {
+                    source: "../icons/dial.png"
+                    sourceSize.width: 28
+                    sourceSize.height: 28
+                    anchors.centerIn: parent
+                    rotation: 135
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
+                }
+
+                MouseArea {
+                    id: endCallArea
+                    anchors.fill: parent
+                    onClicked: myBackend.endCall()
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on color {
+                    ColorAnimation { duration: 100 }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                }
             }
 
-            MouseArea {
-                anchors.fill: parent
-                onClicked: {
-                    myBackend.endCall();
-                }
+            Text {
+                text: "End"
+                color: Theme.danger
+                font.pixelSize: 11
+                Layout.alignment: Qt.AlignHCenter
             }
         }
     }
 
-    // Merge Call Button (visible only when there are held peers)
+    // --- MERGE CALL BUTTON ---
     Rectangle {
         id: mergeCallBtn
         visible: myBackend.hasHeldPeers
@@ -221,32 +323,42 @@ ColumnLayout {
         height: 48
         width: 180
         radius: 24
-        color: "#27ae60" // Beautiful green color for merging
+        color: mergeArea.pressed ? Qt.darker(Theme.success, 1.2) : Theme.success
 
         RowLayout {
             anchors.centerIn: parent
             spacing: 8
-            
+
             Image {
                 source: "../icons/dial.png"
                 sourceSize: Qt.size(18, 18)
                 fillMode: Image.PreserveAspectFit
             }
-            
+
             Text {
                 text: "Merge Call"
-                color: "white"
-                font.bold: true
+                color: "#FFFFFF"
+                font.weight: Font.DemiBold
                 font.pixelSize: 14
             }
         }
 
         MouseArea {
+            id: mergeArea
             anchors.fill: parent
             onClicked: {
                 myBackend.mergeCalls();
                 myUtils.showToast("Calls merged successfully!");
             }
+            onPressed: parent.scale = 0.95
+            onReleased: parent.scale = 1.0
+        }
+
+        Behavior on color {
+            ColorAnimation { duration: 100 }
+        }
+        Behavior on scale {
+            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
         }
     }
 }

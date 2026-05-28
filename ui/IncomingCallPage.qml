@@ -7,6 +7,7 @@ ColumnLayout {
     anchors.fill: parent
     spacing: 0
 
+    // --- CALLER INFO ---
     Rectangle {
         id: titleSection
         Layout.fillWidth: true
@@ -18,27 +19,94 @@ ColumnLayout {
             anchors.fill: parent
             spacing: 15
 
-            Image {
-                source: "../icons/user.png"
-                sourceSize.width: 100
-                sourceSize.height: 100
+            // Avatar with animated pulsing ring
+            Item {
                 Layout.alignment: Qt.AlignHCenter
-                fillMode: Image.PreserveAspectFit
-                smooth: true
-                mipmap: true
+                width: 110
+                height: 110
+
+                // Outer pulsing ring
+                Rectangle {
+                    id: pulseRing
+                    anchors.centerIn: parent
+                    width: 110
+                    height: 110
+                    radius: 55
+                    color: "transparent"
+                    border.color: Theme.success
+                    border.width: 2
+                    opacity: 0.4
+
+                    SequentialAnimation on scale {
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 1.3; duration: 1200; easing.type: Easing.OutQuad }
+                        NumberAnimation { to: 1.0; duration: 1200; easing.type: Easing.InQuad }
+                    }
+
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 0; duration: 1200; easing.type: Easing.OutQuad }
+                        NumberAnimation { to: 0.4; duration: 1200; easing.type: Easing.InQuad }
+                    }
+                }
+
+                // Second pulse ring (offset timing)
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 110
+                    height: 110
+                    radius: 55
+                    color: "transparent"
+                    border.color: Theme.success
+                    border.width: 1.5
+                    opacity: 0.3
+
+                    SequentialAnimation on scale {
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 1.5; duration: 1600; easing.type: Easing.OutQuad }
+                        NumberAnimation { to: 1.0; duration: 1600; easing.type: Easing.InQuad }
+                    }
+
+                    SequentialAnimation on opacity {
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 0; duration: 1600; easing.type: Easing.OutQuad }
+                        NumberAnimation { to: 0.3; duration: 1600; easing.type: Easing.InQuad }
+                    }
+                }
+
+                // Avatar container
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: 100
+                    height: 100
+                    radius: 50
+                    color: Theme.surfaceVariant
+                    border.color: Theme.border
+                    border.width: 1
+
+                    Image {
+                        source: "../icons/user.png"
+                        sourceSize.width: 100
+                        sourceSize.height: 100
+                        anchors.centerIn: parent
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
+                        mipmap: true
+                    }
+                }
             }
 
             Text {
                 text: myBackend.callerName !== "" ? myBackend.callerName : "Unknown Caller"
-                color: "#FFFFFF"
+                color: Theme.textPrimary
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 32
-                font.bold: true
+                font.pixelSize: 30
+                font.weight: Font.DemiBold
             }
 
             Text {
                 text: "Incoming call..."
-                color: "#B0B0B0"
+                color: Theme.textSecondary
                 Layout.alignment: Qt.AlignHCenter
                 font.pixelSize: 16
             }
@@ -49,32 +117,33 @@ ColumnLayout {
         Layout.fillHeight: true
     }
 
+    // --- ANSWER / DECLINE ---
     ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
         Layout.bottomMargin: 60
         spacing: 30
 
-        // 1. Swipe to Answer slider track
+        // Swipe to Answer slider track
         Rectangle {
             id: slideTrack
             width: 320
             height: 72
             radius: 36
-            color: Qt.rgba(255, 255, 255, 0.08)
-            border.color: Qt.rgba(255, 255, 255, 0.12)
+            color: Theme.surfaceVariant
+            border.color: Theme.border
             border.width: 1
+            Layout.alignment: Qt.AlignHCenter
 
             // Shimmering instruction text
             Text {
                 id: slideText
                 text: "slide to answer"
-                color: Qt.rgba(255, 255, 255, 0.6)
+                color: Theme.textSecondary
                 font.pixelSize: 16
                 font.letterSpacing: 1
                 anchors.centerIn: parent
-                anchors.horizontalCenterOffset: 20 // Offset right to center in the remaining track space
+                anchors.horizontalCenterOffset: 20
 
-                // Smooth shimmering pulse animation
                 SequentialAnimation on opacity {
                     loops: Animation.Infinite
                     NumberAnimation { to: 0.2; duration: 1200; easing.type: Easing.InOutSine }
@@ -90,7 +159,7 @@ ColumnLayout {
                 width: 64
                 height: 64
                 radius: 32
-                color: "#4CAF50" // iOS-style Emerald Green
+                color: Theme.success
 
                 Image {
                     source: "../icons/dial.png"
@@ -102,7 +171,6 @@ ColumnLayout {
                     mipmap: true
                 }
 
-                // Snap-back animation when released early
                 Behavior on x {
                     id: snapBackBehavior
                     enabled: !dragArea.drag.active
@@ -123,21 +191,20 @@ ColumnLayout {
 
                 onReleased: {
                     if (slideHandle.x >= drag.maximumX - 8) {
-                        // Accept Call!
                         myBackend.acceptCall();
                     }
                 }
             }
         }
 
-        // 2. Decline Button Section
+        // Decline Button
         ColumnLayout {
             spacing: 8
             Layout.alignment: Qt.AlignHCenter
 
             Rectangle {
                 id: declineBtn
-                color: "#F44336" // iOS-style Crimson Red
+                color: declineArea.pressed ? Qt.darker(Theme.danger, 1.2) : Theme.danger
                 height: 60
                 width: 60
                 radius: 30
@@ -148,27 +215,33 @@ ColumnLayout {
                     sourceSize.width: 32
                     sourceSize.height: 32
                     anchors.centerIn: parent
-                    rotation: 135 // Turned down to hang up orientation
+                    rotation: 135
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                     mipmap: true
                 }
 
                 MouseArea {
+                    id: declineArea
                     anchors.fill: parent
-                    onClicked: {
-                        myBackend.endCall();
-                    }
-                    onPressed: declineBtn.color = "#D32F2F"
-                    onReleased: declineBtn.color = "#F44336"
+                    onClicked: myBackend.endCall()
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on color {
+                    ColorAnimation { duration: 100 }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
             }
 
             Text {
                 text: "Decline"
-                color: "#B0B0B0"
+                color: Theme.textSecondary
                 font.pixelSize: 13
-                font.bold: true
+                font.weight: Font.DemiBold
                 Layout.alignment: Qt.AlignHCenter
             }
         }

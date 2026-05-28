@@ -31,11 +31,14 @@ if (ANDROID)
     add_android_openssl_libraries(DialSome)
 endif()
 
+set_source_files_properties(ui/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 qt_add_qml_module(DialSome
     URI DialSome
     VERSION 1.0
     QML_FILES
         Main.qml
+        ui/Theme.qml
         ui/LoginPage.qml
         ui/MainPage.qml
         ui/IncomingCallPage.qml

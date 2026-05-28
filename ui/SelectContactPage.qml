@@ -5,74 +5,89 @@ import QtQuick.Controls
 Rectangle {
     id: selectContactPage
     anchors.fill: parent
-    color: "#000000"
+    color: Theme.background
+
+    Behavior on color {
+        ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
+    }
 
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 15
-        spacing: 20
+        spacing: 16
 
-        // Header Section
+        // --- HEADER ---
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 50
-            spacing: 15
+            spacing: 12
 
             // Back button
             Rectangle {
                 width: 40
                 height: 40
-                radius: 20
-                color: "#1e1e1e"
+                radius: 12
+                color: backContactArea.pressed ? Theme.cardHover : Theme.surfaceVariant
 
-                Image {
-                    source: "../icons/dial.png" // We can rotate the dial icon to act as a back arrow or clean icon
-                    sourceSize: Qt.size(20, 20)
+                Text {
+                    text: "‹"
+                    color: Theme.textPrimary
+                    font.pixelSize: 24
                     anchors.centerIn: parent
-                    rotation: -135 // Rotate the dial phone icon to look like a back arrow/pointing left
-                    fillMode: Image.PreserveAspectFit
                 }
 
                 MouseArea {
+                    id: backContactArea
                     anchors.fill: parent
                     onClicked: mainStack.pop()
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
             }
 
             Text {
                 text: "Add Participant"
-                color: "white"
+                color: Theme.textPrimary
                 font.pixelSize: 22
-                font.bold: true
+                font.weight: Font.DemiBold
                 Layout.fillWidth: true
             }
         }
 
-        // Search/Filter Bar
+        // --- SEARCH BAR ---
         TextField {
             id: searchBar
             placeholderText: "Search contacts..."
             Layout.fillWidth: true
-            color: "white"
-            placeholderTextColor: "#808080"
+            color: Theme.textPrimary
+            placeholderTextColor: Theme.textSecondary
             font.pixelSize: 15
 
             background: Rectangle {
-                implicitHeight: 45
-                color: "#121212"
-                radius: 8
-                border.color: searchBar.activeFocus ? "#5B89F7" : "#333333"
+                implicitHeight: 48
+                color: Theme.inputBackground
+                radius: 12
+                border.color: searchBar.activeFocus ? Theme.inputFocusBorder : Theme.inputBorder
                 border.width: 1
+
+                Behavior on border.color {
+                    ColorAnimation { duration: 200 }
+                }
             }
         }
 
-        // Contacts list
+        // --- CONTACTS LIST ---
         ListView {
             id: selectContactsView
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
             model: myBackend.contacts
+            spacing: 6
 
             delegate: ItemDelegate {
                 width: selectContactsView.width
@@ -80,28 +95,30 @@ Rectangle {
                 // Filter logic
                 visible: modelData.name.toLowerCase().indexOf(searchBar.text.toLowerCase()) !== -1 ||
                          modelData.email.toLowerCase().indexOf(searchBar.text.toLowerCase()) !== -1
-                height: visible ? 70 : 0
+                height: visible ? 72 : 0
 
                 background: Rectangle {
-                    color: parent.pressed ? "#222222" : "transparent"
-                    radius: 8
+                    color: parent.pressed ? Theme.cardHover : Theme.card
+                    radius: 12
+                    border.color: Theme.border
+                    border.width: 1
                 }
 
                 contentItem: RowLayout {
-                    spacing: 15
+                    spacing: 14
                     anchors.fill: parent
                     anchors.margins: 10
 
                     Rectangle {
-                        width: 45
-                        height: 45
-                        radius: 22.5
-                        color: "#1e1e1e"
+                        width: 44
+                        height: 44
+                        radius: 22
+                        color: Theme.surfaceVariant
 
                         Image {
                             source: "../icons/user.png"
                             anchors.centerIn: parent
-                            sourceSize: Qt.size(45, 45)
+                            sourceSize: Qt.size(44, 44)
                             fillMode: Image.PreserveAspectFit
                             smooth: true
                         }
@@ -109,28 +126,30 @@ Rectangle {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 2
-                        
+                        spacing: 3
+
                         Text {
                             text: modelData.name
-                            color: "white"
-                            font.bold: true
+                            color: Theme.textPrimary
+                            font.weight: Font.DemiBold
                             font.pixelSize: 15
                         }
-                        
+
                         Text {
                             text: modelData.email
-                            color: "#808080"
+                            color: Theme.textSecondary
                             font.pixelSize: 12
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
                         }
                     }
 
-                    // Dial icon
+                    // Dial action icon
                     Rectangle {
                         width: 36
                         height: 36
                         radius: 18
-                        color: "#27ae60"
+                        color: Theme.success
 
                         Image {
                             source: "../icons/dial.png"
@@ -138,12 +157,26 @@ Rectangle {
                             anchors.centerIn: parent
                             fillMode: Image.PreserveAspectFit
                         }
+
+                        scale: dialIconArea.pressed ? 0.85 : 1.0
+                        Behavior on scale {
+                            NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
+                        }
+
+                        MouseArea {
+                            id: dialIconArea
+                            anchors.fill: parent
+                            onClicked: {
+                                myBackend.dialNewParticipant(modelData.email);
+                                mainStack.pop();
+                            }
+                        }
                     }
                 }
 
                 onClicked: {
                     myBackend.dialNewParticipant(modelData.email);
-                    mainStack.pop(); // Go back to CallingPage
+                    mainStack.pop();
                 }
             }
         }

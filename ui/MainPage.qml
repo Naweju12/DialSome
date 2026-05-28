@@ -6,294 +6,396 @@ ColumnLayout {
     id: mainPage
     spacing: 0
 
+    // --- HEADER ---
     Rectangle {
         id: titleSection
         Layout.fillWidth: true
         Layout.preferredHeight: 60
-
         color: "transparent"
-        border.width: 1
 
         RowLayout {
             anchors.fill: parent
+            spacing: 10
 
             Text {
                 text: "DialSome"
-                color: "#5B89F7"
+                color: Theme.accent
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
 
-                font.pixelSize: 18
+                font.pixelSize: 22
+                font.weight: Font.DemiBold
             }
 
             Rectangle {
                 width: 10
                 height: 10
-                color: myBackend.serverConnected ? "green" : "red"
+                color: myBackend.serverConnected ? Theme.statusOnline : Theme.statusOffline
                 radius: width / 2
 
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.verticalCenterOffset: 2
+
+                // Pulse animation for online status
+                SequentialAnimation on scale {
+                    running: myBackend.serverConnected
+                    loops: Animation.Infinite
+                    NumberAnimation { to: 1.3; duration: 800; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutSine }
+                }
             }
 
             Item {
                 Layout.fillWidth: true
             }
 
-            Image {
-                id: addContactBtn
-                source: "../icons/add.png"
-                sourceSize.width: 30
-                sourceSize.height: 30
-                Layout.preferredWidth: 30
-                Layout.preferredHeight: 30
+            // Add Contact button
+            Rectangle {
+                width: 36
+                height: 36
+                radius: 18
+                color: Theme.surfaceVariant
                 visible: optionsSection.selectedIndex === 2
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+
+                Image {
+                    id: addContactBtn
+                    source: "../icons/add.png"
+                    sourceSize.width: 20
+                    sourceSize.height: 20
+                    anchors.centerIn: parent
+                }
 
                 MouseArea {
                     anchors.fill: parent
                     onClicked: addContactPopup.open()
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
             }
 
-            Image {
-                id: settingsBtn
-                source: "../icons/settings.png"
-                sourceSize.width: 20
-                sourceSize.height: 20
+            // Settings button
+            Rectangle {
+                width: 36
+                height: 36
+                radius: 18
+                color: Theme.surfaceVariant
+                Layout.preferredWidth: 36
+                Layout.preferredHeight: 36
+
+                Image {
+                    id: settingsBtn
+                    source: "../icons/settings.png"
+                    sourceSize.width: 18
+                    sourceSize.height: 18
+                    anchors.centerIn: parent
+                }
 
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
                         mainStack.push(settingsPageComponent)
                     }
+                    onPressed: parent.scale = 0.9
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
             }
         }
     }
 
+    // Subtle header divider
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 1
+        color: Theme.divider
+    }
+
+    // --- TAB BAR ---
     Rectangle {
         id: optionsSection
         Layout.fillWidth: true
-        Layout.preferredHeight: 35
-        color: "#121212"
-        Layout.topMargin: 10
-        radius: 8
+        Layout.preferredHeight: 42
+        color: Theme.tabBackground
+        Layout.topMargin: 12
+        radius: 12
 
         // 0 = Dialer, 1 = Recents, 2 = Contacts
         property int selectedIndex: 0
 
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 3
+            anchors.margins: 4
+            spacing: 4
 
-            Rectangle {
-                id: optionsSectionFavourites
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                color: optionsSection.selectedIndex === 0 ? mainWindow.color : "transparent"
-                radius: 5
+            Repeater {
+                model: ["Dialer", "Recents", "Contacts"]
 
-                Text {
-                    text: "Dialer"
-                    color: optionsSection.selectedIndex === 0 ? "#5B89F7" : "white"
-                    anchors.centerIn: parent
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    color: optionsSection.selectedIndex === index ? Theme.accent : "transparent"
+                    radius: 8
 
-                    font.pixelSize: 13
-                    font.bold: true
-                }
+                    Text {
+                        text: modelData
+                        color: optionsSection.selectedIndex === index ? Theme.tabSelectedText : Theme.tabUnselectedText
+                        anchors.centerIn: parent
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                    }
 
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: optionsSection.selectedIndex = 0
-                }
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: optionsSection.selectedIndex = index
+                    }
 
-                Behavior on color {
-                    ColorAnimation { duration: 200 }
-                }
-            }
+                    Behavior on color {
+                        ColorAnimation { duration: 200; easing.type: Easing.InOutQuad }
+                    }
 
-            Rectangle {
-                id: optionsSectionRecents
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                color: optionsSection.selectedIndex === 1 ? mainWindow.color : "transparent"
-                radius: 5
-
-                Text {
-                    text: "Recents"
-                    color: optionsSection.selectedIndex === 1 ? "#5B89F7" : "white"
-                    anchors.centerIn: parent
-
-                    font.pixelSize: 13
-                    font.bold: true
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: optionsSection.selectedIndex = 1
-                }
-
-                Behavior on color {
-                    ColorAnimation { duration: 200 }
-                }
-            }
-
-            Rectangle {
-                id: optionsSectionContacts
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                color: optionsSection.selectedIndex === 2 ? mainWindow.color : "transparent"
-                radius: 5
-
-                Text {
-                    text: "Contacts"
-                    color: optionsSection.selectedIndex === 2 ? "#5B89F7" : "white"
-                    anchors.centerIn: parent
-
-                    font.pixelSize: 13
-                    font.bold: true
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: optionsSection.selectedIndex = 2
-                }
-
-                Behavior on color {
-                    ColorAnimation { duration: 200 }
+                    // Subtle scale pop on selection
+                    scale: optionsSection.selectedIndex === index ? 1.0 : 0.98
+                    Behavior on scale {
+                        NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                    }
                 }
             }
         }
     }
 
+    // --- MAIN CONTENT ---
     Rectangle {
         id: mainSection
         Layout.fillWidth: true
         Layout.fillHeight: true
         color: "transparent"
-        Layout.topMargin: 10
+        Layout.topMargin: 16
 
+        // ===== DIALER TAB =====
         ColumnLayout {
             anchors.horizontalCenter: parent.horizontalCenter
+            anchors.top: parent.top
+            anchors.topMargin: 20
             spacing: 20
             visible: optionsSection.selectedIndex === 0
 
             TextField {
                 id: roomInput
                 placeholderText: "Enter Email(s), comma-separated"
-                color: "white"
-                background: Rectangle { color: "#333"; radius: 5 }
-                Layout.preferredWidth: 250
+                placeholderTextColor: Theme.textSecondary
+                color: Theme.textPrimary
+                font.pixelSize: 14
+                background: Rectangle {
+                    implicitHeight: 48
+                    color: Theme.inputBackground
+                    radius: 12
+                    border.color: roomInput.activeFocus ? Theme.inputFocusBorder : Theme.inputBorder
+                    border.width: 1
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 200 }
+                    }
+                }
+                Layout.preferredWidth: 280
                 Layout.alignment: Qt.AlignHCenter
             }
 
-            Button {
-                text: "Start Call"
-                onClicked: {
-                    if (roomInput.text.trim().length > 0) {
-                        myBackend.startCall(roomInput.text.trim())
+            // Start Call button — modern styled
+            Rectangle {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 280
+                Layout.preferredHeight: 48
+                radius: 12
+                color: startCallArea.pressed ? Qt.darker(Theme.accent, 1.2) : Theme.accent
+
+                Text {
+                    text: "Start Call"
+                    color: "#FFFFFF"
+                    font.pixelSize: 15
+                    font.weight: Font.DemiBold
+                    anchors.centerIn: parent
+                }
+
+                MouseArea {
+                    id: startCallArea
+                    anchors.fill: parent
+                    onClicked: {
+                        if (roomInput.text.trim().length > 0) {
+                            myBackend.startCall(roomInput.text.trim())
+                        }
                     }
                 }
-                Layout.alignment: Qt.AlignHCenter
+
+                Behavior on color {
+                    ColorAnimation { duration: 100 }
+                }
+
+                scale: startCallArea.pressed ? 0.97 : 1.0
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                }
             }
 
             Text {
                 text: myBackend.message
-                color: "#5B89F7"
+                color: Theme.accent
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
             }
         }
 
+        // ===== RECENTS TAB =====
         ListView {
             id: recentsView
             anchors.fill: parent
             visible: optionsSection.selectedIndex === 1
             model: myBackend.recentCalls
             clip: true
+            spacing: 6
 
             delegate: ItemDelegate {
                 width: recentsView.width
-                height: 70
+                height: 72
 
                 background: Rectangle {
-                    color: parent.pressed ? "#222" : "transparent"
+                    color: parent.pressed ? Theme.cardHover : Theme.card
+                    radius: 12
+                    border.color: Theme.border
+                    border.width: 1
                 }
 
                 contentItem: RowLayout {
-                    spacing: 15
+                    spacing: 14
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+
                     Rectangle {
-                        width: 45; height: 45; radius: 22.5; color: "#333"
+                        width: 44; height: 44; radius: 22
+                        color: Theme.surfaceVariant
                         Image {
                             source: "../icons/user.png"
                             anchors.centerIn: parent
-                            sourceSize: Qt.size(45, 45)
+                            sourceSize: Qt.size(44, 44)
                             fillMode: Image.PreserveAspectFit
                             smooth: true
                         }
                     }
+
                     ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 3
                         Text {
                             text: modelData.name
-                            color: "white"
-                            font.bold: true
+                            color: Theme.textPrimary
+                            font.weight: Font.DemiBold
+                            font.pixelSize: 15
                         }
                         Text {
                             text: (modelData.isIncoming ? "Incoming" : "Outgoing") + " • " + modelData.email
-                            color: "#808080"
+                            color: Theme.textSecondary
                             font.pixelSize: 12
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    // Call action hint
+                    Rectangle {
+                        width: 32; height: 32; radius: 16
+                        color: Theme.accentSoft
+                        Image {
+                            source: "../icons/dial.png"
+                            sourceSize: Qt.size(16, 16)
+                            anchors.centerIn: parent
+                            fillMode: Image.PreserveAspectFit
                         }
                     }
                 }
+
                 onClicked: {
-                    // Re-dial the person directly from recents
                     myBackend.startCall(modelData.email)
                 }
             }
         }
 
+        // ===== CONTACTS TAB =====
         ListView {
             id: contactsView
             anchors.fill: parent
             visible: optionsSection.selectedIndex === 2
             model: myBackend.contacts
             clip: true
+            spacing: 6
 
             delegate: ItemDelegate {
                 width: contactsView.width
-                height: 70
+                height: 72
 
                 background: Rectangle {
-                    color: parent.pressed ? "#222" : "transparent"
+                    color: parent.pressed ? Theme.cardHover : Theme.card
+                    radius: 12
+                    border.color: Theme.border
+                    border.width: 1
                 }
 
                 contentItem: RowLayout {
-                    spacing: 15
+                    spacing: 14
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+
                     Rectangle {
-                        width: 45; height: 45; radius: 22.5; color: "#333"
+                        width: 44; height: 44; radius: 22
+                        color: Theme.surfaceVariant
                         Image {
                             source: "../icons/user.png"
                             anchors.centerIn: parent
-                            sourceSize: Qt.size(45, 45)
+                            sourceSize: Qt.size(44, 44)
                             fillMode: Image.PreserveAspectFit
                             smooth: true
                         }
                     }
+
                     ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 3
                         Text {
                             text: modelData.name
-                            color: "white"
-                            font.bold: true
+                            color: Theme.textPrimary
+                            font.weight: Font.DemiBold
+                            font.pixelSize: 15
                         }
                         Text {
                             text: modelData.email
-                            color: "#808080"
+                            color: Theme.textSecondary
                             font.pixelSize: 12
+                            elide: Text.ElideRight
+                            Layout.fillWidth: true
+                        }
+                    }
+
+                    // Call action icon
+                    Rectangle {
+                        width: 32; height: 32; radius: 16
+                        color: Theme.accentSoft
+                        Image {
+                            source: "../icons/dial.png"
+                            sourceSize: Qt.size(16, 16)
+                            anchors.centerIn: parent
+                            fillMode: Image.PreserveAspectFit
                         }
                     }
                 }
+
                 onClicked: {
-                    // Call the person directly from contacts
                     myBackend.startCall(modelData.email)
                 }
             }
@@ -318,12 +420,10 @@ ColumnLayout {
             }
 
             onAccepted: {
-                // 2. If they click OK, launch the Android Settings page
                 myBackend.requestFullScreenIntentPermission();
             }
         }
 
-        // 3. Check the permission when this page loads
         Component.onCompleted: {
             if (!myBackend.canUseFullScreenIntent()) {
                 fullScreenPermissionDialog.open();
@@ -331,6 +431,7 @@ ColumnLayout {
         }
     }
 
+    // --- ADD CONTACT POPUP ---
     Popup {
         id: addContactPopup
         parent: Overlay.overlay
@@ -339,38 +440,41 @@ ColumnLayout {
         width: parent.width * 0.9
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside //
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         background: Rectangle {
-            color: "#2c3e50"
-            radius: 16
-            border.color: "#34495e"
-            border.width: 2
+            color: Theme.popupBackground
+            radius: 20
+            border.color: Theme.popupBorder
+            border.width: 1
         }
 
         contentItem: ColumnLayout {
-            spacing: 20 //
+            spacing: 20
 
             Text {
                 text: "Add New Contact"
-                color: "white"
-                font.bold: true
+                color: Theme.textPrimary
+                font.weight: Font.DemiBold
                 font.pixelSize: 20
                 Layout.alignment: Qt.AlignHCenter
-                bottomPadding: 5 //
+                bottomPadding: 5
             }
 
             TextField {
                 id: contactEmailInput
                 placeholderText: "Enter Email Address"
-                Layout.fillWidth: true //
-                color: "white"
+                placeholderTextColor: Theme.textSecondary
+                Layout.fillWidth: true
+                color: Theme.textPrimary
+                font.pixelSize: 14
 
                 background: Rectangle {
                     implicitHeight: 48
-                    color: "#34495e"
-                    radius: 8
-                    border.color: contactEmailInput.activeFocus ? "#4CAF50" : "transparent" //
+                    color: Theme.inputBackground
+                    radius: 12
+                    border.color: contactEmailInput.activeFocus ? Theme.inputFocusBorder : Theme.inputBorder
+                    border.width: 1
                 }
             }
 
@@ -378,37 +482,64 @@ ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 12
 
-                Button {
-                    text: "Cancel"
+                // Cancel button
+                Rectangle {
                     Layout.fillWidth: true
-                    flat: true
-                    onClicked: {
-                        contactEmailInput.text = "" // Clear the input
-                        addContactPopup.close() //
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: cancelContactArea.pressed ? Theme.cardHover : Theme.buttonSecondary
+
+                    Text {
+                        text: "Cancel"
+                        color: Theme.buttonSecondaryText
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: cancelContactArea
+                        anchors.fill: parent
+                        onClicked: {
+                            contactEmailInput.text = ""
+                            addContactPopup.close()
+                        }
                     }
                 }
 
-                Button {
-                    id: addBtn
-                    text: "Add"
+                // Add button
+                Rectangle {
                     Layout.fillWidth: true
-                    highlighted: true
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: !addBtnEnabled ? Theme.buttonSecondary
+                         : addContactArea.pressed ? Qt.darker(Theme.success, 1.2)
+                         : Theme.success
+                    opacity: addBtnEnabled ? 1.0 : 0.5
 
-                    // Button is only enabled if input is not empty
-                    enabled: contactEmailInput.text.trim().length > 0 //
+                    property bool addBtnEnabled: contactEmailInput.text.trim().length > 0
 
-                    background: Rectangle {
-                        color: !addBtn.enabled ? "#555555" : (addBtn.pressed ? "#388E3C" : "#4CAF50") //
-                        radius: 8
-                        opacity: addBtn.enabled ? 1.0 : 0.5 //
+                    Text {
+                        text: "Add"
+                        color: parent.addBtnEnabled ? "#FFFFFF" : Theme.textSecondary
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
                     }
 
-                    onClicked: {
-                        // Call backend function
-                        myBackend.addContact(contactEmailInput.text.trim())
+                    MouseArea {
+                        id: addContactArea
+                        anchors.fill: parent
+                        enabled: parent.addBtnEnabled
+                        onClicked: {
+                            myBackend.addContact(contactEmailInput.text.trim())
+                            contactEmailInput.text = ""
+                            addContactPopup.close();
+                        }
+                    }
 
-                        contactEmailInput.text = "" // clear upon submit
-                        addContactPopup.close(); //
+                    Behavior on color {
+                        ColorAnimation { duration: 150 }
                     }
                 }
             }

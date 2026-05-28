@@ -6,10 +6,14 @@ import QtQuick.Layouts
 Rectangle {
     id: loginPage
     anchors.fill: parent
-    color: "#0B0F19" // Modern premium dark blue/grey background
+    color: Theme.background
 
     property bool isLoggingIn: false
     property string statusText: ""
+
+    Behavior on color {
+        ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
+    }
 
     Connections {
         target: myBackend
@@ -38,29 +42,29 @@ Rectangle {
         width: Math.min(parent.width * 0.85, 320)
         spacing: 35
 
-        // App Branding Section
+        // --- APP BRANDING ---
         ColumnLayout {
             Layout.fillWidth: true
             Layout.alignment: Qt.AlignHCenter
             spacing: 16
 
-            // Beautiful circular container for the icon with integrated glow
+            // Icon container with glow
             Rectangle {
                 Layout.alignment: Qt.AlignHCenter
                 width: 120
                 height: 120
                 radius: 60
-                color: "#131A26" // Slightly lighter dark blue for depth
-                border.color: "#1E293B" // Subtle modern border
+                color: Theme.surface
+                border.color: Theme.border
                 border.width: 1.5
 
-                // Subtle ambient glow centered behind the container
+                // Ambient glow
                 Rectangle {
                     anchors.centerIn: parent
                     width: 136
                     height: 136
                     radius: 68
-                    color: "#3B82F6" // Brand blue glow
+                    color: Theme.accent
                     opacity: 0.14
                     z: -1
                 }
@@ -71,8 +75,8 @@ Rectangle {
                     height: 64
                     anchors.centerIn: parent
                     fillMode: Image.PreserveAspectFit
-                    
-                    // Pulse opacity animation when logging in
+
+                    // Pulse animation when logging in
                     NumberAnimation on opacity {
                         running: loginPage.isLoggingIn
                         from: 1.0; to: 0.4
@@ -85,21 +89,21 @@ Rectangle {
 
             Text {
                 text: "DialSome"
-                color: "#FFFFFF"
+                color: Theme.textPrimary
                 font.pixelSize: 28
-                font.bold: true
+                font.weight: Font.Bold
                 Layout.alignment: Qt.AlignHCenter
             }
 
             Text {
                 text: "Simple • Secure • Instant"
-                color: "#94A3B8"
+                color: Theme.textSecondary
                 font.pixelSize: 14
                 Layout.alignment: Qt.AlignHCenter
             }
         }
 
-        // Interactive / Loading Area
+        // --- LOGIN / LOADING AREA ---
         Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 120
@@ -112,7 +116,7 @@ Rectangle {
                 spacing: 15
                 opacity: loginPage.isLoggingIn ? 0.0 : 1.0
                 visible: opacity > 0.0
-                
+
                 Behavior on opacity {
                     NumberAnimation { duration: 200; easing.type: Easing.InOutQuad }
                 }
@@ -121,7 +125,7 @@ Rectangle {
                     text: "Sign in with Google"
                     Layout.fillWidth: true
                     Layout.preferredHeight: 48
-                    Material.background: "#2563EB"
+                    Material.background: Theme.accent
                     Material.foreground: "#FFFFFF"
                     font.pixelSize: 15
                     font.bold: true
@@ -134,7 +138,7 @@ Rectangle {
                 }
             }
 
-            // Premium Busy Indicator & Status (Fades in when logging in)
+            // Loading indicator (Fades in when logging in)
             ColumnLayout {
                 anchors.centerIn: parent
                 width: parent.width
@@ -149,17 +153,16 @@ Rectangle {
                 BusyIndicator {
                     Layout.alignment: Qt.AlignHCenter
                     running: loginPage.isLoggingIn
-                    Material.accent: "#3B82F6"
+                    Material.accent: Theme.accent
                 }
 
                 Text {
                     id: statusLabel
                     text: loginPage.statusText
-                    color: "#3B82F6"
+                    color: Theme.accent
                     font.pixelSize: 14
                     Layout.alignment: Qt.AlignHCenter
-                    
-                    // Simple smooth opacity transition when text changes
+
                     Behavior on text {
                         SequentialAnimation {
                             NumberAnimation { target: statusLabel; property: "opacity"; to: 0; duration: 80 }
