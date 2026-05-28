@@ -34,6 +34,7 @@ class Backend : public QObject {
     Q_PROPERTY(bool speakerOn READ speakerOn WRITE setSpeakerOn NOTIFY speakerOnChanged)
     Q_PROPERTY(bool hasHeldPeers READ hasHeldPeers NOTIFY heldPeersChanged)
     Q_PROPERTY(bool micMuted READ micMuted WRITE setMicMuted NOTIFY micMutedChanged)
+    Q_PROPERTY(bool callConnected READ callConnected NOTIFY callConnectedChanged)
 public:
     explicit Backend(QObject *parent = nullptr);
     QString message() const;
@@ -74,6 +75,7 @@ public:
     QString myEmail() const { return m_myEmail; }
     void addActivePeer(const QString &email);
     void removeActivePeer(const QString &email);
+    bool callConnected() const { return !m_activePeers.isEmpty(); }
 
 signals:
     void messageChanged();
@@ -95,6 +97,7 @@ signals:
     void speakerOnChanged();
     void heldPeersChanged();
     void micMutedChanged();
+    void callConnectedChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);

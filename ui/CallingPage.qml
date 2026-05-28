@@ -7,6 +7,40 @@ ColumnLayout {
     anchors.fill: parent
     spacing: 0
 
+    property int callDuration: 0
+
+    function formatDuration(seconds) {
+        var hours = Math.floor(seconds / 3600)
+        var mins = Math.floor((seconds % 3600) / 60)
+        var secs = seconds % 60
+        
+        var timeStr = ""
+        if (hours > 0) {
+            timeStr += hours + ":" + (mins < 10 ? "0" : "")
+        }
+        timeStr += mins + ":" + (secs < 10 ? "0" : "") + secs
+        return timeStr
+    }
+
+    Timer {
+        id: callTimer
+        interval: 1000
+        running: myBackend.callConnected
+        repeat: true
+        onTriggered: {
+            callDuration += 1
+        }
+    }
+
+    Connections {
+        target: myBackend
+        function onCallConnectedChanged() {
+            if (!myBackend.callConnected) {
+                callDuration = 0
+            }
+        }
+    }
+
     Rectangle {
         id: titleSection
         Layout.fillWidth: true
@@ -46,6 +80,15 @@ ColumnLayout {
                 Layout.alignment: Qt.AlignHCenter
 
                 font.pixelSize: 15
+            }
+
+            Text {
+                text: callPage.formatDuration(callPage.callDuration)
+                color: "#2ecc71" // Emerald green call active color
+                Layout.alignment: Qt.AlignHCenter
+                font.pixelSize: 18
+                font.bold: true
+                visible: myBackend.callConnected
             }
         }
     }

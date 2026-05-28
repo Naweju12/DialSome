@@ -649,6 +649,7 @@ void Backend::endCall() {
     emit this->callerInfoChanged();
     emit this->heldPeersChanged();
     emit this->micMutedChanged();
+    emit this->callConnectedChanged();
 }
 
 QString Backend::callerEmail() const {
@@ -669,6 +670,7 @@ void Backend::addActivePeer(const QString &email) {
     if (!m_activePeers.contains(email)) {
         m_activePeers.append(email);
         emit callerInfoChanged();
+        emit callConnectedChanged();
     }
     setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
 }
@@ -677,6 +679,7 @@ void Backend::removeActivePeer(const QString &email) {
     if (m_activePeers.contains(email)) {
         m_activePeers.removeAll(email);
         emit callerInfoChanged();
+        emit callConnectedChanged();
     }
     if (m_heldPeers.contains(email)) {
         m_heldPeers.removeAll(email);
