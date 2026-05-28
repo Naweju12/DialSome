@@ -40,40 +40,79 @@ ColumnLayout {
             }
         }
     }
-
-    // --- CALLER INFO ---
-    Rectangle {
-        id: titleSection
+    // --- CALL STATUS HEADER (Always visible but styled dynamically) ---
+    ColumnLayout {
         Layout.fillWidth: true
-        Layout.preferredHeight: 80
-        Layout.topMargin: 50
-        color: "transparent"
+        Layout.topMargin: 40
+        Layout.preferredHeight: 110
+        spacing: 8
 
+        Text {
+            text: myBackend.activePeers.length > 1 ? "Conference Call" : "Voice Call"
+            color: Theme.textSecondary
+            Layout.alignment: Qt.AlignHCenter
+            font.pixelSize: 14
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1
+        }
+
+        Text {
+            text: callPage.formatDuration(callPage.callDuration)
+            color: Theme.success
+            Layout.alignment: Qt.AlignHCenter
+            font.pixelSize: 32
+            font.weight: Font.Bold
+            visible: myBackend.callConnected
+        }
+
+        Text {
+            text: myBackend.message
+            color: Theme.textSecondary
+            Layout.alignment: Qt.AlignHCenter
+            font.pixelSize: 14
+            horizontalAlignment: Text.AlignHCenter
+            wrapMode: Text.WordWrap
+            Layout.preferredWidth: parent.width * 0.8
+        }
+    }
+
+    // --- DYNAMIC CONTENT AREA ---
+    StackLayout {
+        id: callContentStack
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.margins: 20
+        currentIndex: myBackend.activePeers.length > 1 ? 1 : 0
+
+        // Slide 0: Single Call UI (Original large avatar and name)
         ColumnLayout {
-            anchors.fill: parent
-            spacing: 12
+            spacing: 20
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
-            // Avatar with subtle ring
+            Item { Layout.fillHeight: true } // spacer
+
+            // Avatar
             Rectangle {
                 Layout.alignment: Qt.AlignHCenter
-                width: 88
-                height: 88
-                radius: 44
+                width: 120
+                height: 120
+                radius: 60
                 color: "transparent"
                 border.color: Theme.accent
                 border.width: 2
 
                 Rectangle {
                     anchors.centerIn: parent
-                    width: 80
-                    height: 80
-                    radius: 40
+                    width: 110
+                    height: 110
+                    radius: 55
                     color: Theme.surfaceVariant
 
                     Image {
                         source: "../icons/user.png"
-                        sourceSize.width: 80
-                        sourceSize.height: 80
+                        sourceSize.width: 110
+                        sourceSize.height: 110
                         anchors.centerIn: parent
                         fillMode: Image.PreserveAspectFit
                         smooth: true
@@ -81,11 +120,10 @@ ColumnLayout {
                     }
                 }
 
-                // Pulsing ring when connected
                 SequentialAnimation on border.width {
-                    running: myBackend.callConnected
+                    running: myBackend.callConnected && myBackend.activePeers.length <= 1
                     loops: Animation.Infinite
-                    NumberAnimation { to: 3; duration: 1000; easing.type: Easing.InOutSine }
+                    NumberAnimation { to: 4; duration: 1000; easing.type: Easing.InOutSine }
                     NumberAnimation { to: 1.5; duration: 1000; easing.type: Easing.InOutSine }
                 }
             }
@@ -94,34 +132,133 @@ ColumnLayout {
                 text: myBackend.callerName
                 color: Theme.textPrimary
                 Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: myBackend.callerName.indexOf(",") !== -1 ? 18 : 28
+                font.pixelSize: 26
                 font.weight: Font.DemiBold
                 horizontalAlignment: Text.AlignHCenter
                 wrapMode: Text.WordWrap
                 Layout.preferredWidth: parent.width * 0.9
             }
 
-            Text {
-                text: myBackend.message
-                color: Theme.textSecondary
-                Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 15
-            }
+            Item { Layout.fillHeight: true } // spacer
+        }
+
+        // Slide 1: Conference Call UI (List of participants)
+        ColumnLayout {
+            spacing: 12
+            Layout.fillWidth: true
+            Layout.fillHeight: true
 
             Text {
-                text: callPage.formatDuration(callPage.callDuration)
-                color: Theme.success
-                Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 18
+                text: "PARTICIPANTS (" + (myBackend.activePeers.length + 1) + ")"
+                color: Theme.textSecondary
+                font.pixelSize: 12
                 font.weight: Font.DemiBold
-                visible: myBackend.callConnected
+                font.letterSpacing: 1
+                Layout.leftMargin: 8
+            }
+
+            ListView {
+                id: participantsList
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                model: myBackend.activePeers
+                spacing: 8
+                clip: true
+
+                delegate: Rectangle {
+                    width: participantsList.width
+                    height: 64
+                    radius: 16
+                    color: Theme.card
+                    border.color: Theme.border
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 12
+
+                        // Small Avatar / Icon
+                        Rectangle {
+                            width: 36
+                            height: 36
+                            radius: 10
+                            color: Theme.surfaceVariant
+
+                            Text {
+                                text: modelData.charAt(0).toUpperCase()
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 16
+                                anchors.centerIn: parent
+                                visible: modelData.length > 0
+                            }
+                        }
+
+                        // Participant Info
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            Text {
+                                text: modelData
+                                color: Theme.textPrimary
+                                font.weight: Font.DemiBold
+                                font.pixelSize: 14
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                spacing: 6
+                                Rectangle {
+                                    width: 6
+                                    height: 6
+                                    radius: 3
+                                    color: Theme.success
+                                }
+                                Text {
+                                    text: "Connected"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                }
+                            }
+                        }
+
+                        // Disconnect Button
+                        Rectangle {
+                            width: 36
+                            height: 36
+                            radius: 10
+                            color: disconnectArea.pressed ? Qt.darker(Theme.danger, 1.2) : Theme.danger
+                            Layout.alignment: Qt.AlignVCenter
+
+                            Image {
+                                source: "../icons/dial.png"
+                                sourceSize.width: 18
+                                sourceSize.height: 18
+                                anchors.centerIn: parent
+                                rotation: 135 // red decline phone icon angle
+                                fillMode: Image.PreserveAspectFit
+                            }
+
+                            MouseArea {
+                                id: disconnectArea
+                                anchors.fill: parent
+                                onClicked: myBackend.disconnectPeer(modelData)
+                                onPressed: parent.scale = 0.9
+                                onReleased: parent.scale = 1.0
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
-
-    // Push to top
-    Item {
-        Layout.fillHeight: true
     }
 
     // --- ACTION BUTTONS ---
@@ -226,6 +363,7 @@ ColumnLayout {
         ColumnLayout {
             spacing: 6
             Layout.alignment: Qt.AlignHCenter
+            visible: myBackend.activePeers.length < 4
 
             Rectangle {
                 id: addCallBtn

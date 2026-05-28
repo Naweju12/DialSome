@@ -925,6 +925,16 @@ QString Backend::appVersion() const {
     return "1.0";
 }
 
+void Backend::disconnectPeer(const QString &email) {
+    if (email.isEmpty()) return;
+    qDebug() << "Disconnecting specific peer:" << email;
+    if (this->m_api != nullptr) {
+        this->m_api->end_call(email, this->m_jwtAccessToken);
+    }
+    removeActivePeer(email);
+}
+
+
 
 
 
