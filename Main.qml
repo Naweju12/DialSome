@@ -58,6 +58,11 @@ ApplicationWindow {
         SettingsPage {}
     }
 
+    Component {
+        id: selectContactPageComponent
+        SelectContactPage {}
+    }
+
     Connections {
         target: myBackend
         function onLoginFinished(email, name, userid, refresh_token) {

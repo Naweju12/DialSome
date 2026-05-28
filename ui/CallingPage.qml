@@ -109,7 +109,7 @@ ColumnLayout {
             MouseArea {
                 anchors.fill: parent
                 onClicked: {
-                    invitePopup.open();
+                    mainStack.push(selectContactPageComponent);
                 }
             }
         }
@@ -142,106 +142,40 @@ ColumnLayout {
         }
     }
 
-    Popup {
-        id: invitePopup
-        parent: Overlay.overlay
-        x: (parent.width - width) / 2
-        y: parent.height * 0.25
-        width: parent.width * 0.9
-        modal: true
-        focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+    // Merge Call Button (visible only when there are held peers)
+    Rectangle {
+        id: mergeCallBtn
+        visible: myBackend.hasHeldPeers
+        Layout.alignment: Qt.AlignHCenter
+        Layout.bottomMargin: 30
+        height: 48
+        width: 180
+        radius: 24
+        color: "#27ae60" // Beautiful green color for merging
 
-        background: Rectangle {
-            color: "#1e1e1e"
-            radius: 16
-            border.color: "#333333"
-            border.width: 2
-        }
-
-        contentItem: ColumnLayout {
-            spacing: 20
+        RowLayout {
+            anchors.centerIn: parent
+            spacing: 8
+            
+            Image {
+                source: "../icons/dial.png"
+                sourceSize: Qt.size(18, 18)
+                fillMode: Image.PreserveAspectFit
+            }
             
             Text {
-                text: "Invite to Group Call"
+                text: "Merge Call"
                 color: "white"
                 font.bold: true
-                font.pixelSize: 18
-                Layout.alignment: Qt.AlignHCenter
+                font.pixelSize: 14
             }
+        }
 
-            TextField {
-                id: inviteEmailInput
-                placeholderText: "Enter Email Address"
-                Layout.fillWidth: true
-                color: "white"
-                placeholderTextColor: "#808080"
-                font.pixelSize: 15
-
-                background: Rectangle {
-                    implicitHeight: 48
-                    color: "#2a2a2a"
-                    radius: 8
-                    border.color: inviteEmailInput.activeFocus ? "#5B89F7" : "#444444"
-                    border.width: 1
-                }
-            }
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 12
-
-                Button {
-                    text: "Cancel"
-                    Layout.fillWidth: true
-                    flat: true
-                    
-                    contentItem: Text {
-                        text: parent.text
-                        color: "white"
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        color: parent.pressed ? "#333333" : "transparent"
-                        radius: 8
-                    }
-
-                    onClicked: {
-                        inviteEmailInput.text = "";
-                        invitePopup.close();
-                    }
-                }
-
-                Button {
-                    id: inviteSubmitBtn
-                    text: "Invite"
-                    Layout.fillWidth: true
-                    enabled: inviteEmailInput.text.trim().length > 0
-
-                    contentItem: Text {
-                        text: parent.text
-                        color: parent.enabled ? "white" : "#808080"
-                        font.bold: true
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-
-                    background: Rectangle {
-                        color: !parent.enabled ? "#333333" : (parent.pressed ? "#4477ee" : "#5B89F7")
-                        radius: 8
-                        opacity: parent.enabled ? 1.0 : 0.5
-                    }
-
-                    onClicked: {
-                        myBackend.inviteToCall(inviteEmailInput.text.trim());
-                        myUtils.showToast("Inviting " + inviteEmailInput.text.trim() + "...");
-                        inviteEmailInput.text = "";
-                        invitePopup.close();
-                    }
-                }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                myBackend.mergeCalls();
+                myUtils.showToast("Calls merged successfully!");
             }
         }
     }

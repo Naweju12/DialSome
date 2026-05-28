@@ -590,6 +590,7 @@ void Backend::endCall() {
     #endif
 
     this->m_activePeers.clear();
+    this->m_heldPeers.clear();
     this->m_callerEmail = ""; 
     this->m_callerName = "";
     this->m_isCaller = false;
@@ -598,6 +599,7 @@ void Backend::endCall() {
     qDebug() << "Call Ended";
     emit this->callEnded();
     emit this->callerInfoChanged();
+    emit this->heldPeersChanged();
 }
 
 QString Backend::callerEmail() const {
@@ -626,6 +628,10 @@ void Backend::removeActivePeer(const QString &email) {
     if (m_activePeers.contains(email)) {
         m_activePeers.removeAll(email);
         emit callerInfoChanged();
+    }
+    if (m_heldPeers.contains(email)) {
+        m_heldPeers.removeAll(email);
+        emit heldPeersChanged();
     }
     #ifdef Q_OS_ANDROID
     if (m_webrtc.isValid()) {
@@ -779,4 +785,54 @@ void Backend::inviteToCall(const QString &email) {
     qDebug() << "Inviting peer:" << email << "to active room:" << m_currentRoomId;
     this->m_api->get_room(email, this->m_jwtAccessToken, this->m_currentRoomId);
 }
+
+void Backend::setPeerMuted(const QString &email, bool mute) {
+    #ifdef Q_OS_ANDROID
+    if (m_webrtc.isValid()) {
+        m_webrtc.callMethod<void>("setPeerMuted", "(Ljava/lang/String;Z)V",
+                                  QJniObject::fromString(email).object(), mute);
+    }
+    #endif
+}
+
+void Backend::dialNewParticipant(const QString &email) {
+    if (email.isEmpty() || m_currentRoomId.isEmpty()) {
+        qDebug() << "Cannot dial new participant: email is empty or no active room ID.";
+        return;
+    }
+
+    qDebug() << "Dialing new participant:" << email << "Muting current participants...";
+
+    // 1. Mute all currently active peers (place them on hold)
+    for (const QString &peer : m_activePeers) {
+        if (!m_heldPeers.contains(peer)) {
+            m_heldPeers.append(peer);
+            setPeerMuted(peer, true);
+        }
+    }
+    emit heldPeersChanged();
+
+    // 2. Set message to reflect dialing status
+    setMessage("Calling " + email + " (existing participants on hold)");
+
+    // 3. Dial/invite the new participant to the same room ID
+    this->m_api->get_room(email, this->m_jwtAccessToken, this->m_currentRoomId);
+}
+
+void Backend::mergeCalls() {
+    qDebug() << "Merging calls. Unmuting all held participants...";
+
+    // 1. Unmute all held peers
+    for (const QString &peer : m_heldPeers) {
+        setPeerMuted(peer, false);
+    }
+
+    // 2. Clear held peers
+    m_heldPeers.clear();
+    emit heldPeersChanged();
+
+    // 3. Update message
+    setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
+}
+
 

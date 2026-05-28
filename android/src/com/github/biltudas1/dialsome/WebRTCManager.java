@@ -112,6 +112,19 @@ public class WebRTCManager {
         }
     }
 
+    public void setPeerMuted(final String peerEmail, final boolean mute) {
+        PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc != null) {
+            Log.d(TAG, "Setting peer muted: " + peerEmail + " = " + mute);
+            for (RtpSender sender : pc.getSenders()) {
+                MediaStreamTrack track = sender.track();
+                if (track != null && track.kind().equals("audio")) {
+                    sender.setTrack(mute ? null : localAudioTrack, false);
+                }
+            }
+        }
+    }
+
     public void createPeerConnection(final String peerEmail) {
         if (peerConnections.containsKey(peerEmail)) {
             Log.d(TAG, "PeerConnection for " + peerEmail + " already exists.");

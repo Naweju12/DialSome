@@ -32,6 +32,7 @@ class Backend : public QObject {
     Q_PROPERTY(QVariantList recentCalls READ recentCalls NOTIFY recentCallsChanged)
     Q_PROPERTY(QVariantList contacts READ contacts NOTIFY contactsChanged)
     Q_PROPERTY(bool speakerOn READ speakerOn WRITE setSpeakerOn NOTIFY speakerOnChanged)
+    Q_PROPERTY(bool hasHeldPeers READ hasHeldPeers NOTIFY heldPeersChanged)
 public:
     explicit Backend(QObject *parent = nullptr);
     QString message() const;
@@ -63,6 +64,10 @@ public:
     Q_INVOKABLE bool canUseFullScreenIntent();
     Q_INVOKABLE void requestFullScreenIntentPermission();
     Q_INVOKABLE void inviteToCall(const QString &email);
+    Q_INVOKABLE void dialNewParticipant(const QString &email);
+    Q_INVOKABLE void mergeCalls();
+    bool hasHeldPeers() const { return !m_heldPeers.isEmpty(); }
+    void setPeerMuted(const QString &email, bool mute);
     QString myEmail() const { return m_myEmail; }
     void addActivePeer(const QString &email);
     void removeActivePeer(const QString &email);
@@ -85,6 +90,7 @@ signals:
     void contactsChanged();
     void incomingCall();
     void speakerOnChanged();
+    void heldPeersChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -112,6 +118,7 @@ private:
     bool m_speakerOn = false;
     QString m_myEmail = "";
     QStringList m_activePeers;
+    QStringList m_heldPeers;
 };
 
 #endif
