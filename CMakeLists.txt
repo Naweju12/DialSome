@@ -41,6 +41,7 @@ qt_add_qml_module(DialSome
         ui/IncomingCallPage.qml
         ui/CallingPage.qml
         ui/SettingsPage.qml
+        ui/SelectContactPage.qml
     SOURCES
         src/lib/securestorage.h src/lib/securestorage.cpp
         src/lib/google.h src/lib/google.cpp
