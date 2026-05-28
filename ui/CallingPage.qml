@@ -1,10 +1,27 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import QtMultimedia
 
 Rectangle {
     id: callingPageRoot
     color: Theme.background
+
+    SoundEffect {
+        id: ringbackSound
+        source: "../sounds/ringback.mp3"
+        loops: SoundEffect.Infinite
+    }
+
+    Component.onCompleted: {
+        if (!myBackend.callConnected) {
+            ringbackSound.play()
+        }
+    }
+
+    Component.onDestruction: {
+        ringbackSound.stop()
+    }
 
     Behavior on color {
         ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
@@ -38,7 +55,9 @@ Rectangle {
     Connections {
         target: myBackend
         function onCallConnectedChanged() {
-            if (!myBackend.callConnected) {
+            if (myBackend.callConnected) {
+                ringbackSound.stop()
+            } else {
                 callDuration = 0
             }
         }

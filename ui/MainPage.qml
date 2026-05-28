@@ -193,7 +193,7 @@ ColumnLayout {
 
             TextField {
                 id: roomInput
-                placeholderText: "Enter Email(s), comma-separated"
+                placeholderText: "Enter Email Address"
                 placeholderTextColor: Theme.textSecondary
                 color: Theme.textPrimary
                 font.pixelSize: 14

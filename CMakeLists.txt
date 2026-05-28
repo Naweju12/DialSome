@@ -12,6 +12,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     QuickControls2
     Network
     WebSockets
+    Multimedia
 )
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -65,6 +66,7 @@ qt_add_qml_module(DialSome
         icons/volume_off.png
         icons/mic_on.png
         icons/mic_off.png
+        sounds/ringback.mp3
 )
 
 qt_add_resources(DialSome "configs"
@@ -77,6 +79,7 @@ target_link_libraries(DialSome PRIVATE
     Qt6::QuickControls2
     Qt6::Network
     Qt6::WebSockets
+    Qt6::Multimedia
 )
 
 target_include_directories(DialSome PRIVATE src src/lib)

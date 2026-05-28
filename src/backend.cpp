@@ -302,16 +302,22 @@ void Backend::startCall(const QString &email) {
         return;
     }
 
+    this->m_isCaller = true;
+    this->m_callerEmail = email;
+    this->m_callerName = callerNameForEmail(email);
+    this->setMessage("Connecting to the server...");
+    emit this->startingCall();
+    emit this->callerInfoChanged();
+
     #ifdef Q_OS_ANDROID
         QMicrophonePermission micPermission;
         qApp->requestPermission(micPermission, [this, email](const QPermission &permission) {
             if (permission.status() != Qt::PermissionStatus::Granted) {
                 setMessage("Microphone permission denied!");
+                endCall();
                 return;
             }
 
-            this->m_isCaller = true;
-            setMessage("Connecting to the server...");
             connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
                 this->m_currentRoomId = roomId;
                 this->setMessage("Connecting to the room: " + roomId);
@@ -322,7 +328,6 @@ void Backend::startCall(const QString &email) {
                 this->m_callerName = roomName;
 
                 this->saveToHistory(email, roomName, false);
-                emit this->startingCall();
                 emit this->callerInfoChanged();
 
                 QJniObject context = QNativeInterface::QAndroidApplication::context();
@@ -335,6 +340,8 @@ void Backend::startCall(const QString &email) {
 
             this->m_api->get_room(email, this->m_jwtAccessToken);
         });
+    #else
+        this->saveToHistory(email, this->m_callerName, false);
     #endif
 }
 
