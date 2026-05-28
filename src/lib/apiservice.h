@@ -40,9 +40,11 @@ signals:
     void contactsFetchError(QString error);
 
 private:
+    void safeRefreshToken();
     QPointer<Settings> m_settings;
     QPointer<SecureStorage> m_storage;
     QNetworkAccessManager m_networkManager;
+    bool m_isRefreshing = false;
 };
 
 #endif // APISERVICE_H

@@ -3,6 +3,7 @@
 APIService::APIService(QPointer<Settings> settings, QPointer<SecureStorage> storage, QObject *parent) : QObject(parent) {
     this->m_settings = settings;
     this->m_storage = storage;
+    this->m_isRefreshing = false;
 }
 
 void APIService::update_fcm(QString fcm_token, QString accessToken) {
@@ -49,7 +50,7 @@ void APIService::update_fcm(QString fcm_token, QString accessToken) {
                 emit this->invalidSession();
             }, Qt::SingleShotConnection);
             
-            this->refreshToken();
+            this->safeRefreshToken();
         }
         reply->deleteLater();
     });
@@ -138,10 +139,19 @@ void APIService::get_room(QString email, QString accessToken, QString roomId) {
                 emit this->invalidSession();
             }, Qt::SingleShotConnection);
             
-            this->refreshToken();
+            this->safeRefreshToken();
         }
         reply->deleteLater();
     });
+}
+
+void APIService::safeRefreshToken() {
+    if (m_isRefreshing) {
+        qDebug() << "Already refreshing token, skipping concurrent call.";
+        return;
+    }
+    m_isRefreshing = true;
+    this->refreshToken();
 }
 
 void APIService::refreshToken() {
@@ -155,6 +165,7 @@ void APIService::refreshToken() {
 
     QNetworkReply *reply = this->m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
     connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        m_isRefreshing = false; // Reset the flag!
         if (reply->error() != QNetworkReply::NoError) {
             emit this->tokenRefreshError("failed to refresh token");
             reply->deleteLater();
@@ -268,7 +279,7 @@ void APIService::end_call(QString email, QString accessToken) {
                 emit this->invalidSession();
             }, Qt::SingleShotConnection);
             
-            this->refreshToken();
+            this->safeRefreshToken();
         }
         reply->deleteLater();
     });
@@ -366,7 +377,7 @@ void APIService::fetch_contacts(QString accessToken) {
                 emit this->invalidSession();
             }, Qt::SingleShotConnection);
             
-            this->refreshToken();
+            this->safeRefreshToken();
         }
         reply->deleteLater();
     });
@@ -433,7 +444,7 @@ void APIService::add_contact(QString email, QString accessToken) {
                 emit this->invalidSession();
             }, Qt::SingleShotConnection);
             
-            this->refreshToken();
+            this->safeRefreshToken();
         }
         reply->deleteLater();
     });
