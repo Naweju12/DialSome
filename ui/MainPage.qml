@@ -619,8 +619,43 @@ ColumnLayout {
             anchors.fill: parent
             anchors.margins: 24
 
-            // Top Spacer for vertical balance
-            Item { Layout.preferredHeight: 30 }
+            // Top Header Row with Back Button (like Settings page)
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 56
+                Layout.topMargin: 8
+                spacing: 12
+
+                // Back Button
+                Rectangle {
+                    width: 36
+                    height: 36
+                    radius: 10
+                    color: backArea.pressed ? Theme.cardHover : Theme.surfaceVariant
+                    Layout.alignment: Qt.AlignVCenter
+
+                    Text {
+                        text: "‹"
+                        color: Theme.textPrimary
+                        font.pixelSize: 24
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: backArea
+                        anchors.fill: parent
+                        onClicked: contactDetailsPopup.close()
+                        onPressed: parent.scale = 0.9
+                        onReleased: parent.scale = 1.0
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                    }
+                }
+
+                Item { Layout.fillWidth: true } // push to left
+            }
 
             // --- AVATAR CIRCLE ---
             Rectangle {
@@ -679,9 +714,13 @@ ColumnLayout {
 
                         Image {
                             source: "../icons/dial.png"
+                            width: 22
+                            height: 22
                             sourceSize: Qt.size(22, 22)
                             anchors.centerIn: parent
                             fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            mipmap: true
                         }
 
                         MouseArea {
@@ -724,9 +763,13 @@ ColumnLayout {
 
                         Image {
                             source: "../icons/block.png"
+                            width: 22
+                            height: 22
                             sourceSize: Qt.size(22, 22)
                             anchors.centerIn: parent
                             fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            mipmap: true
                         }
 
                         MouseArea {
@@ -792,34 +835,7 @@ ColumnLayout {
                 }
             }
 
-            Item { Layout.fillHeight: true } // spacer to push Done button to bottom
-
-            // Done/Close Button at the bottom
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 48
-                radius: 14
-                color: Theme.buttonSecondary
-
-                Text {
-                    text: "Done"
-                    color: Theme.buttonSecondaryText
-                    font.pixelSize: 15
-                    font.weight: Font.DemiBold
-                    anchors.centerIn: parent
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: contactDetailsPopup.close()
-                    onPressed: parent.scale = 0.98
-                    onReleased: parent.scale = 1.0
-                }
-
-                Behavior on scale {
-                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-                }
-            }
+            Item { Layout.fillHeight: true } // spacer
         }
     }
 }
