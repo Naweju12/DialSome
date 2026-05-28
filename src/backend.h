@@ -62,6 +62,7 @@ public:
     Q_INVOKABLE void setSpeakerOn(bool on);
     Q_INVOKABLE bool canUseFullScreenIntent();
     Q_INVOKABLE void requestFullScreenIntentPermission();
+    Q_INVOKABLE void inviteToCall(const QString &email);
     QString myEmail() const { return m_myEmail; }
     void addActivePeer(const QString &email);
     void removeActivePeer(const QString &email);
@@ -105,6 +106,7 @@ private:
     QString m_callerEmail = ""; // Email of the other party
     QString m_callerName = "User"; // Name of the other party
     QString m_incomingRoomId = "";
+    QString m_currentRoomId = "";
     QVariantList m_recentCalls;
     QVariantList m_contacts;
     bool m_speakerOn = false;

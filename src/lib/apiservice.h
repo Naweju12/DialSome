@@ -23,7 +23,7 @@ public:
     explicit APIService(QPointer<Settings> settings, QPointer<SecureStorage> storage, QObject *parent = nullptr);
     void update_fcm(QString token, QString accessToken);
     void refreshToken();
-    void get_room(QString email, QString accessToken);
+    void get_room(QString email, QString accessToken, QString roomId = "");
     void end_call(QString email, QString accessToken);
     void fetch_contacts(QString accessToken);
     void add_contact(QString email, QString accessToken);

@@ -54,7 +54,7 @@ async def call_person(
       status_code=status.HTTP_400_BAD_REQUEST,
     )
 
-  room_id = str(uuid.uuid7())
+  room_id = data.room_id if data.room_id else str(uuid.uuid7())
   invited_users = []
   
   for email in emails:

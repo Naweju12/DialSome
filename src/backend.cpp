@@ -303,6 +303,7 @@ void Backend::startCall(const QString &email) {
             this->m_isCaller = true;
             setMessage("Connecting to the server...");
             connect(this->m_api, &APIService::roomFetched, this, [this, email](QString roomId, QString roomName) {
+                this->m_currentRoomId = roomId;
                 this->setMessage("Connecting to the room: " + roomId);
                 QString wsURL = this->m_settings->getWSProtocol() + "://" + this->m_settings->getHost() + "/ws/" + roomId;
                 m_webSocket.open(QUrl(wsURL));
@@ -342,6 +343,7 @@ void Backend::joinCall(const QString &roomId, const QString &email, const QStrin
             }
 
             this->m_isCaller = false;
+            this->m_currentRoomId = roomId;
 
             // Skip the POST request! We already have the roomId.
             this->setMessage("Joining room: " + roomId);
@@ -591,6 +593,7 @@ void Backend::endCall() {
     this->m_callerEmail = ""; 
     this->m_callerName = "";
     this->m_isCaller = false;
+    this->m_currentRoomId = "";
 
     qDebug() << "Call Ended";
     emit this->callEnded();
@@ -767,3 +770,13 @@ void Backend::requestFullScreenIntentPermission() {
         );
     #endif
 }
+
+void Backend::inviteToCall(const QString &email) {
+    if (email.isEmpty() || m_currentRoomId.isEmpty()) {
+        qDebug() << "Cannot invite: email is empty or no active room ID.";
+        return;
+    }
+    qDebug() << "Inviting peer:" << email << "to active room:" << m_currentRoomId;
+    this->m_api->get_room(email, this->m_jwtAccessToken, this->m_currentRoomId);
+}
+

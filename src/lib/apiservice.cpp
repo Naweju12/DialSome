@@ -55,18 +55,21 @@ void APIService::update_fcm(QString fcm_token, QString accessToken) {
     });
 }
 
-void APIService::get_room(QString email, QString accessToken) {
+void APIService::get_room(QString email, QString accessToken, QString roomId) {
     QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost() + API::Voice::call;
     QUrl url(hostUrl);
     
     // Helper lambda to construct and send the request
-    auto sendReq = [this, email, url](QString token) {
+    auto sendReq = [this, email, url, roomId](QString token) {
         QNetworkRequest request(url);
         request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
         request.setRawHeader("Authorization", "Bearer " + token.toUtf8());
 
         QJsonObject json;
         json["email"] = email;
+        if (!roomId.isEmpty()) {
+            json["room_id"] = roomId;
+        }
         return m_networkManager.post(request, QJsonDocument(json).toJson(QJsonDocument::Compact));
     };
 
