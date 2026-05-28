@@ -30,17 +30,18 @@ Rectangle {
                 // --- HEADER ---
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 70
-                    Layout.leftMargin: 20
-                    Layout.rightMargin: 20
+                    Layout.preferredHeight: 56
+                    Layout.leftMargin: 12
+                    Layout.rightMargin: 16
                     spacing: 12
 
                     // Back button
                     Rectangle {
-                        width: 40
-                        height: 40
-                        radius: 12
+                        width: 36
+                        height: 36
+                        radius: 10
                         color: backArea.pressed ? Theme.cardHover : Theme.surfaceVariant
+                        Layout.alignment: Qt.AlignVCenter
 
                         Text {
                             text: "‹"
@@ -68,6 +69,7 @@ Rectangle {
                         font.weight: Font.DemiBold
                         font.pixelSize: 22
                         Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
                     }
                 }
 
@@ -315,7 +317,7 @@ Rectangle {
                             }
 
                             Text {
-                                text: "Version 1.0"
+                                text: "Version " + myBackend.appVersion
                                 color: Theme.textSecondary
                                 font.pixelSize: 13
                             }

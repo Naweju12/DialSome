@@ -899,5 +899,32 @@ void Backend::setMicMuted(bool muted) {
     #endif
 }
 
+QString Backend::appVersion() const {
+#ifdef Q_OS_ANDROID
+    QJniObject context = QNativeInterface::QAndroidApplication::context();
+    if (context.isValid()) {
+        QJniObject packageName = context.callObjectMethod("getPackageName", "()Ljava/lang/String;");
+        QJniObject packageManager = context.callObjectMethod("getPackageManager", "()Landroid/content/pm/PackageManager;");
+        if (packageManager.isValid() && packageName.isValid()) {
+            // Retrieve PackageInfo
+            QJniObject packageInfo = packageManager.callObjectMethod(
+                "getPackageInfo",
+                "(Ljava/lang/String;I)Landroid/content/pm/PackageInfo;",
+                packageName.object(),
+                0
+            );
+            if (packageInfo.isValid()) {
+                QJniObject versionName = packageInfo.getObjectField("versionName", "Ljava/lang/String;");
+                if (versionName.isValid()) {
+                    return versionName.toString();
+                }
+            }
+        }
+    }
+#endif
+    return "1.0";
+}
+
+
 
 

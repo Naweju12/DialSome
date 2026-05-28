@@ -35,8 +35,10 @@ class Backend : public QObject {
     Q_PROPERTY(bool hasHeldPeers READ hasHeldPeers NOTIFY heldPeersChanged)
     Q_PROPERTY(bool micMuted READ micMuted WRITE setMicMuted NOTIFY micMutedChanged)
     Q_PROPERTY(bool callConnected READ callConnected NOTIFY callConnectedChanged)
+    Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
 public:
     explicit Backend(QObject *parent = nullptr);
+    QString appVersion() const;
     QString message() const;
     void setMessage(const QString &msg);
     Q_INVOKABLE void startCall(const QString &email);
