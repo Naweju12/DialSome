@@ -66,7 +66,7 @@ qt_add_qml_module(DialSome
         icons/volume_off.png
         icons/mic_on.png
         icons/mic_off.png
-        sounds/ringback.mp3
+        sounds/ringback.wav
 )
 
 qt_add_resources(DialSome "configs"

@@ -7,21 +7,20 @@ Rectangle {
     id: callingPageRoot
     color: Theme.background
 
-    MediaPlayer {
-        id: ringbackPlayer
-        source: "qrc:/DialSome/sounds/ringback.mp3"
-        audioOutput: AudioOutput {}
-        loops: MediaPlayer.Infinite
+    SoundEffect {
+        id: ringbackSound
+        source: "qrc:/DialSome/sounds/ringback.wav"
+        loops: SoundEffect.Infinite
     }
 
     Component.onCompleted: {
         if (!myBackend.callConnected) {
-            ringbackPlayer.play()
+            ringbackSound.play()
         }
     }
 
     Component.onDestruction: {
-        ringbackPlayer.stop()
+        ringbackSound.stop()
     }
 
     Behavior on color {
@@ -57,7 +56,7 @@ Rectangle {
         target: myBackend
         function onCallConnectedChanged() {
             if (myBackend.callConnected) {
-                ringbackPlayer.stop()
+                ringbackSound.stop()
             } else {
                 callDuration = 0
             }
