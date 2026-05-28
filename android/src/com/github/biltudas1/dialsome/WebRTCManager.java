@@ -195,13 +195,15 @@ public class WebRTCManager {
         synchronized (this) {
             if (localAudioTrack == null) {
                 audioSource = factory.createAudioSource(new MediaConstraints());
-                localAudioTrack = factory.createAudioTrack("ARDAMSa0", audioSource);
+                String uniqueTrackId = "audio_track_" + java.util.UUID.randomUUID().toString();
+                localAudioTrack = factory.createAudioTrack(uniqueTrackId, audioSource);
                 localAudioTrack.setEnabled(true);
             }
         }
 
         // Add the track to PeerConnection to ensure bidirectional "sendrecv" in SDP
-        pc.addTrack(localAudioTrack, Collections.singletonList("ARDAMS"));
+        String uniqueStreamId = "audio_stream_" + java.util.UUID.randomUUID().toString();
+        pc.addTrack(localAudioTrack, Collections.singletonList(uniqueStreamId));
         peerConnections.put(peerEmail, pc);
     }
 
