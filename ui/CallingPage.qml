@@ -58,21 +58,18 @@ Rectangle {
             id: callContentStack
             Layout.fillWidth: true
             Layout.fillHeight: true
-            currentIndex: myBackend.activePeers.length > 1 ? 1 : 0
+            currentIndex: myBackend.conferenceParticipants.length > 1 ? 1 : 0
 
             // Slide 0: Single Call UI (Avatar -> Name -> Duration)
             ColumnLayout {
-                spacing: 24
+                spacing: 8
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-
-                Item {
-                    Layout.fillHeight: true
-                }
 
                 // Avatar centered at top
                 Rectangle {
                     Layout.alignment: Qt.AlignHCenter
+                    Layout.topMargin: 48
                     width: 140
                     height: 140
                     radius: 70
@@ -152,7 +149,7 @@ Rectangle {
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.topMargin: 20
-                    Layout.preferredHeight: 110
+                    Layout.preferredHeight: 70
                     spacing: 8
 
                     Text {
@@ -174,19 +171,10 @@ Rectangle {
                         font.weight: Font.Bold
                         visible: myBackend.callConnected
                     }
-
-                    Text {
-                        text: myBackend.message
-                        color: Theme.textSecondary
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                        font.pixelSize: 14
-                        wrapMode: Text.WordWrap
-                    }
                 }
 
                 Text {
-                    text: "PARTICIPANTS (" + (myBackend.activePeers.length + 1) + ")"
+                    text: "PARTICIPANTS (" + myBackend.conferenceParticipants.length + ")"
                     color: Theme.textSecondary
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
@@ -198,7 +186,7 @@ Rectangle {
                 id: participantsList
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                model: myBackend.activePeers
+                model: myBackend.conferenceParticipants
                 spacing: 8
                 clip: true
 
@@ -224,12 +212,12 @@ Rectangle {
                             color: Theme.surfaceVariant
 
                             Text {
-                                text: modelData.charAt(0).toUpperCase()
+                                text: modelData.name ? modelData.name.charAt(0).toUpperCase() : ""
                                 color: Theme.textPrimary
                                 font.weight: Font.DemiBold
                                 font.pixelSize: 16
                                 anchors.centerIn: parent
-                                visible: modelData.length > 0
+                                visible: modelData.name && modelData.name.length > 0
                             }
                         }
 
@@ -239,7 +227,7 @@ Rectangle {
                             spacing: 2
 
                             Text {
-                                text: modelData
+                                text: modelData.name
                                 color: Theme.textPrimary
                                 font.weight: Font.DemiBold
                                 font.pixelSize: 14
@@ -253,10 +241,14 @@ Rectangle {
                                     width: 6
                                     height: 6
                                     radius: 3
-                                    color: Theme.success
+                                    color: {
+                                        if (modelData.status === "Connected") return Theme.success;
+                                        if (modelData.status === "Ringing") return Theme.accent;
+                                        return Theme.textSecondary; // "On Hold"
+                                    }
                                 }
                                 Text {
-                                    text: "Connected"
+                                    text: modelData.status + " • " + modelData.email
                                     color: Theme.textSecondary
                                     font.pixelSize: 11
                                 }
@@ -283,7 +275,7 @@ Rectangle {
                             MouseArea {
                                 id: disconnectArea
                                 anchors.fill: parent
-                                onClicked: myBackend.disconnectPeer(modelData)
+                                onClicked: myBackend.disconnectPeer(modelData.email)
                                 onPressed: parent.scale = 0.9
                                 onReleased: parent.scale = 1.0
                             }
@@ -489,53 +481,7 @@ Rectangle {
         }
     }
 
-    // --- MERGE CALL BUTTON ---
-    Rectangle {
-        id: mergeCallBtn
-        visible: myBackend.hasHeldPeers
-        Layout.alignment: Qt.AlignHCenter
-        Layout.bottomMargin: 30
-        height: 48
-        width: 180
-        radius: 24
-        color: mergeArea.pressed ? Qt.darker(Theme.success, 1.2) : Theme.success
 
-        RowLayout {
-            anchors.centerIn: parent
-            spacing: 8
-
-            Image {
-                source: "../icons/dial.png"
-                sourceSize: Qt.size(18, 18)
-                fillMode: Image.PreserveAspectFit
-            }
-
-            Text {
-                text: "Merge Call"
-                color: "#FFFFFF"
-                font.weight: Font.DemiBold
-                font.pixelSize: 14
-            }
-        }
-
-        MouseArea {
-            id: mergeArea
-            anchors.fill: parent
-            onClicked: {
-                myBackend.mergeCalls();
-                myUtils.showToast("Calls merged successfully!");
-            }
-            onPressed: parent.scale = 0.95
-            onReleased: parent.scale = 1.0
-        }
-
-        Behavior on color {
-            ColorAnimation { duration: 100 }
-        }
-        Behavior on scale {
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-        }
-    }
 }
 }
 

@@ -655,6 +655,7 @@ void Backend::endCall() {
 
     this->m_activePeers.clear();
     this->m_heldPeers.clear();
+    this->m_dialingPeers.clear();
     this->m_micMuted = false;
     this->m_callerEmail = ""; 
     this->m_callerName = "";
@@ -677,20 +678,70 @@ QString Backend::callerEmail() const {
     return this->m_callerEmail;
 }
 
+QString Backend::callerNameForEmail(const QString &email) const {
+    for (const QVariant &c : m_contacts) {
+        QVariantMap map = c.toMap();
+        if (map["email"].toString().trimmed().compare(email.trimmed(), Qt::CaseInsensitive) == 0) {
+            return map["name"].toString();
+        }
+    }
+    if (email.contains("@")) {
+        return email.split("@").first();
+    }
+    return email;
+}
+
+QVariantList Backend::conferenceParticipants() const {
+    QVariantList list;
+    QStringList addedEmails;
+
+    // 1. Check active peers
+    for (const QString &email : m_activePeers) {
+        if (addedEmails.contains(email)) continue;
+
+        QVariantMap map;
+        map["email"] = email;
+        map["name"] = callerNameForEmail(email);
+        if (m_heldPeers.contains(email)) {
+            map["status"] = "On Hold";
+        } else {
+            map["status"] = "Connected";
+        }
+        list.append(map);
+        addedEmails.append(email);
+    }
+
+    // 2. Check held peers
+    for (const QString &email : m_heldPeers) {
+        if (addedEmails.contains(email)) continue;
+
+        QVariantMap map;
+        map["email"] = email;
+        map["name"] = callerNameForEmail(email);
+        map["status"] = "On Hold";
+        list.append(map);
+        addedEmails.append(email);
+    }
+
+    // 3. Check dialing peers
+    for (const QString &email : m_dialingPeers) {
+        if (addedEmails.contains(email)) continue;
+
+        QVariantMap map;
+        map["email"] = email;
+        map["name"] = callerNameForEmail(email);
+        map["status"] = "Ringing";
+        list.append(map);
+        addedEmails.append(email);
+    }
+
+    return list;
+}
+
 QString Backend::callerName() const {
     if (!m_activePeers.isEmpty()) {
         if (m_activePeers.size() == 1) {
-            QString email = m_activePeers.first();
-            for (const QVariant &c : m_contacts) {
-                QVariantMap map = c.toMap();
-                if (map["email"].toString().trimmed().compare(email.trimmed(), Qt::CaseInsensitive) == 0) {
-                    return map["name"].toString();
-                }
-            }
-            if (email.contains("@")) {
-                return email.split("@").first();
-            }
-            return email;
+            return callerNameForEmail(m_activePeers.first());
         }
         return m_activePeers.join(", ");
     }
@@ -698,15 +749,28 @@ QString Backend::callerName() const {
 }
 
 void Backend::addActivePeer(const QString &email) {
+    if (m_dialingPeers.contains(email)) {
+        m_dialingPeers.removeAll(email);
+    }
     if (!m_activePeers.contains(email)) {
         m_activePeers.append(email);
         emit callerInfoChanged();
         emit callConnectedChanged();
     }
     setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
+
+    // Auto-merge calls if there is a held peer (i.e. we are in a conference dial situation)
+    if (!m_heldPeers.isEmpty()) {
+        qDebug() << "Auto-merging new participant connection:" << email;
+        mergeCalls();
+    }
 }
 
 void Backend::removeActivePeer(const QString &email) {
+    if (m_dialingPeers.contains(email)) {
+        m_dialingPeers.removeAll(email);
+        emit callerInfoChanged();
+    }
     if (m_activePeers.contains(email)) {
         m_activePeers.removeAll(email);
         emit callerInfoChanged();
@@ -721,7 +785,7 @@ void Backend::removeActivePeer(const QString &email) {
         m_webrtc.callMethod<void>("closePeer", "(Ljava/lang/String;)V", QJniObject::fromString(email).object());
     }
     #endif
-    if (m_activePeers.isEmpty()) {
+    if (m_activePeers.isEmpty() && m_dialingPeers.isEmpty()) {
         setMessage("All peers disconnected.");
         endCall();
     } else {
@@ -886,6 +950,10 @@ void Backend::dialNewParticipant(const QString &email) {
 
     qDebug() << "Dialing new participant:" << email << "Muting current participants...";
 
+    if (!m_dialingPeers.contains(email)) {
+        m_dialingPeers.append(email);
+    }
+
     // 1. Mute all currently active peers (place them on hold)
     for (const QString &peer : m_activePeers) {
         if (!m_heldPeers.contains(peer)) {
@@ -894,6 +962,7 @@ void Backend::dialNewParticipant(const QString &email) {
         }
     }
     emit heldPeersChanged();
+    emit callerInfoChanged();
 
     // 2. Set message to reflect dialing status
     setMessage("Calling " + email + " (existing participants on hold)");
@@ -913,6 +982,7 @@ void Backend::mergeCalls() {
     // 2. Clear held peers
     m_heldPeers.clear();
     emit heldPeersChanged();
+    emit callerInfoChanged();
 
     // 3. Update message
     setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
