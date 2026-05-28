@@ -237,6 +237,8 @@ Rectangle {
 
                             RowLayout {
                                 spacing: 6
+                                Layout.fillWidth: true
+
                                 Rectangle {
                                     width: 6
                                     height: 6
@@ -246,11 +248,73 @@ Rectangle {
                                         if (modelData.status === "Ringing") return Theme.accent;
                                         return Theme.textSecondary; // "On Hold"
                                     }
+                                    Layout.alignment: Qt.AlignVCenter
                                 }
+
                                 Text {
-                                    text: modelData.status + " • " + modelData.email
+                                    id: statusLabel
+                                    text: modelData.status
                                     color: Theme.textSecondary
                                     font.pixelSize: 11
+                                    font.weight: Font.Medium
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Text {
+                                    text: "•"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 11
+                                    Layout.alignment: Qt.AlignVCenter
+                                }
+
+                                Item {
+                                    id: marqueeContainer
+                                    Layout.fillWidth: true
+                                    height: 16
+                                    clip: true
+                                    Layout.alignment: Qt.AlignVCenter
+
+                                    Text {
+                                        id: emailText
+                                        text: modelData.email
+                                        color: Theme.textSecondary
+                                        font.pixelSize: 11
+                                        anchors.verticalCenter: parent.verticalCenter
+
+                                        readonly property bool needsScroll: width > marqueeContainer.width
+
+                                        SequentialAnimation on x {
+                                            id: marqueeAnim
+                                            running: emailText.needsScroll
+                                            loops: Animation.Infinite
+
+                                            PauseAnimation { duration: 1500 }
+
+                                            PropertyAnimation {
+                                                target: emailText
+                                                property: "x"
+                                                to: -(emailText.width - marqueeContainer.width)
+                                                duration: Math.max(1500, (emailText.width - marqueeContainer.width) * 35)
+                                                easing.type: Easing.Linear
+                                            }
+
+                                            PauseAnimation { duration: 1500 }
+
+                                            PropertyAnimation {
+                                                target: emailText
+                                                property: "x"
+                                                to: 0
+                                                duration: Math.max(1500, (emailText.width - marqueeContainer.width) * 35)
+                                                easing.type: Easing.Linear
+                                            }
+                                        }
+
+                                        onNeedsScrollChanged: {
+                                            if (!needsScroll) {
+                                                x = 0;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
