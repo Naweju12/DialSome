@@ -412,11 +412,25 @@ ColumnLayout {
                     Rectangle {
                         width: 32; height: 32; radius: 16
                         color: Theme.accentSoft
+
                         Image {
                             source: "../icons/dial.png"
                             sourceSize: Qt.size(16, 16)
                             anchors.centerIn: parent
                             fillMode: Image.PreserveAspectFit
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                myBackend.startCall(modelData.email)
+                            }
+                            onPressed: parent.scale = 0.9
+                            onReleased: parent.scale = 1.0
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                         }
                     }
                 }
@@ -574,66 +588,52 @@ ColumnLayout {
         }
     }
 
-    // --- IPHONE-STYLE CONTACT DETAILS POPUP ---
+    // --- FULL-SCREEN CONTACT DETAILS POPUP ---
     Popup {
         id: contactDetailsPopup
         parent: Overlay.overlay
         x: 0
-        y: parent.height - height
+        y: 0
         width: parent.width
-        height: parent.height * 0.72 // iPhone style 3/4 height sheet
+        height: parent.height
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        closePolicy: Popup.CloseOnEscape
 
         enter: Transition {
-            NumberAnimation { property: "y"; from: parent.height; to: parent.height - height; duration: 300; easing.type: Easing.OutCubic }
+            NumberAnimation { property: "y"; from: parent.height; to: 0; duration: 300; easing.type: Easing.OutCubic }
         }
         exit: Transition {
-            NumberAnimation { property: "y"; from: parent.height - height; to: parent.height; duration: 250; easing.type: Easing.InCubic }
+            NumberAnimation { property: "y"; from: 0; to: parent.height; duration: 250; easing.type: Easing.InCubic }
         }
 
         background: Rectangle {
             color: Theme.popupBackground
-            radius: 24
-            // iOS Bottom Sheet only rounds top corners
+            radius: 0
             clip: true
-            Rectangle {
-                width: parent.width
-                height: 24
-                color: Theme.popupBackground
-                anchors.bottom: parent.bottom
-            }
-            border.color: Theme.popupBorder
-            border.width: 1
+            border.width: 0
         }
 
         contentItem: ColumnLayout {
-            spacing: 20
-            anchors.margins: 20
+            spacing: 24
+            anchors.fill: parent
+            anchors.margins: 24
 
-            // Top Drag Handle (iOS style pill)
-            Rectangle {
-                width: 36
-                height: 5
-                radius: 2.5
-                color: Theme.divider
-                Layout.alignment: Qt.AlignHCenter
-                Layout.topMargin: -8
-            }
+            // Top Spacer for vertical balance
+            Item { Layout.preferredHeight: 30 }
 
             // --- AVATAR CIRCLE ---
             Rectangle {
-                width: 80
-                height: 80
-                radius: 40
+                width: 100
+                height: 100
+                radius: 50
                 color: Theme.accentSoft
                 Layout.alignment: Qt.AlignHCenter
 
                 Text {
                     text: selectedContactName.length > 0 ? selectedContactName.charAt(0).toUpperCase() : "?"
                     color: Theme.accent
-                    font.pixelSize: 32
+                    font.pixelSize: 42
                     font.weight: Font.Bold
                     anchors.centerIn: parent
                 }
@@ -647,7 +647,7 @@ ColumnLayout {
                 Text {
                     text: selectedContactName
                     color: Theme.textPrimary
-                    font.pixelSize: 20
+                    font.pixelSize: 22
                     font.weight: Font.DemiBold
                     Layout.alignment: Qt.AlignHCenter
                 }
@@ -655,7 +655,7 @@ ColumnLayout {
                 Text {
                     text: selectedContactEmail
                     color: Theme.textSecondary
-                    font.pixelSize: 13
+                    font.pixelSize: 14
                     Layout.alignment: Qt.AlignHCenter
                 }
             }
@@ -663,22 +663,23 @@ ColumnLayout {
             // --- QUICK ACTION CONTAINER ---
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
-                spacing: 24
+                spacing: 40
 
+                // Call Action Button
                 ColumnLayout {
                     spacing: 6
                     Layout.alignment: Qt.AlignHCenter
 
                     Rectangle {
                         id: detailsCallBtn
-                        width: 50
-                        height: 50
-                        radius: 25
+                        width: 54
+                        height: 54
+                        radius: 27
                         color: Theme.accent
 
                         Image {
                             source: "../icons/dial.png"
-                            sourceSize: Qt.size(20, 20)
+                            sourceSize: Qt.size(22, 22)
                             anchors.centerIn: parent
                             fillMode: Image.PreserveAspectFit
                         }
@@ -701,6 +702,59 @@ ColumnLayout {
                     Text {
                         text: "Call"
                         color: Theme.accent
+                        font.pixelSize: 11
+                        font.weight: Font.Medium
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                }
+
+                // Block/Unblock Action Button
+                ColumnLayout {
+                    spacing: 6
+                    Layout.alignment: Qt.AlignHCenter
+
+                    property bool isBlocked: myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1
+
+                    Rectangle {
+                        id: detailsBlockBtn
+                        width: 54
+                        height: 54
+                        radius: 27
+                        color: parent.isBlocked ? Theme.success : Theme.danger
+
+                        Image {
+                            source: "../icons/block.png"
+                            sourceSize: Qt.size(22, 22)
+                            anchors.centerIn: parent
+                            fillMode: Image.PreserveAspectFit
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                if (myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1) {
+                                    myBackend.unblockUser(selectedContactEmail)
+                                    myUtils.showToast("Contact unblocked successfully")
+                                } else {
+                                    myBackend.blockUser(selectedContactEmail)
+                                    myUtils.showToast("Contact blocked successfully")
+                                }
+                            }
+                            onPressed: parent.scale = 0.9
+                            onReleased: parent.scale = 1.0
+                        }
+
+                        Behavior on color {
+                            ColorAnimation { duration: 200 }
+                        }
+                        Behavior on scale {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Text {
+                        text: parent.isBlocked ? "Unblock" : "Block"
+                        color: parent.isBlocked ? Theme.success : Theme.danger
                         font.pixelSize: 11
                         font.weight: Font.Medium
                         Layout.alignment: Qt.AlignHCenter
@@ -738,59 +792,19 @@ ColumnLayout {
                 }
             }
 
-            // --- iOS STYLE DANGER ACTION SECTION ---
-            Rectangle {
-                id: blockToggleBtn
-                Layout.fillWidth: true
-                Layout.preferredHeight: 52
-                radius: 16
-                color: Theme.card
-                border.color: Theme.border
-                border.width: 1
-
-                property bool isBlocked: myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.margins: 14
-
-                    Text {
-                        text: blockToggleBtn.isBlocked ? "Unblock this Caller" : "Block this Caller"
-                        color: blockToggleBtn.isBlocked ? Theme.success : Theme.danger
-                        font.weight: Font.DemiBold
-                        font.pixelSize: 14
-                        Layout.alignment: Qt.AlignVCenter
-                        Layout.fillWidth: true
-                    }
-                }
-
-                MouseArea {
-                    anchors.fill: parent
-                    onClicked: {
-                        if (myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1) {
-                            myBackend.unblockUser(selectedContactEmail)
-                            myUtils.showToast("Contact unblocked successfully")
-                        } else {
-                            myBackend.blockUser(selectedContactEmail)
-                            myUtils.showToast("Contact blocked successfully")
-                        }
-                    }
-                    onPressed: parent.color = Theme.cardHover
-                    onReleased: parent.color = Theme.card
-                }
-            }
+            Item { Layout.fillHeight: true } // spacer to push Done button to bottom
 
             // Done/Close Button at the bottom
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 44
-                radius: 12
+                Layout.preferredHeight: 48
+                radius: 14
                 color: Theme.buttonSecondary
 
                 Text {
                     text: "Done"
                     color: Theme.buttonSecondaryText
-                    font.pixelSize: 14
+                    font.pixelSize: 15
                     font.weight: Font.DemiBold
                     anchors.centerIn: parent
                 }
@@ -798,11 +812,16 @@ ColumnLayout {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: contactDetailsPopup.close()
+                    onPressed: parent.scale = 0.98
+                    onReleased: parent.scale = 1.0
+                }
+
+                Behavior on scale {
+                    NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
                 }
             }
-
-            Item { Layout.fillHeight: true } // spacer
         }
     }
 }
+
 
