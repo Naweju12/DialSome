@@ -18,6 +18,7 @@ public class WebRTCManager {
     private static final String TAG = "WebRTCManager";
     private PeerConnectionFactory factory;
     private final Map<String, PeerConnection> peerConnections = new ConcurrentHashMap<>();
+    private final Map<String, List<IceCandidate>> queuedRemoteCandidates = new ConcurrentHashMap<>();
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
     private AudioManager audioManager;
@@ -125,6 +126,15 @@ public class WebRTCManager {
         }
     }
 
+    public void setMicrophoneMuted(final boolean mute) {
+        synchronized (this) {
+            if (localAudioTrack != null) {
+                localAudioTrack.setEnabled(!mute);
+                Log.d(TAG, "Local audio track enabled: " + !mute);
+            }
+        }
+    }
+
     public void createPeerConnection(final String peerEmail) {
         if (peerConnections.containsKey(peerEmail)) {
             Log.d(TAG, "PeerConnection for " + peerEmail + " already exists.");
@@ -192,6 +202,15 @@ public class WebRTCManager {
         // Add the track to PeerConnection to ensure bidirectional "sendrecv" in SDP
         pc.addTrack(localAudioTrack, Collections.singletonList("ARDAMS"));
         peerConnections.put(peerEmail, pc);
+
+        // Drain any queued remote ICE candidates for this peer
+        List<IceCandidate> queued = queuedRemoteCandidates.remove(peerEmail);
+        if (queued != null) {
+            Log.d(TAG, "Draining " + queued.size() + " queued remote ICE candidates for: " + peerEmail);
+            for (IceCandidate cand : queued) {
+                pc.addIceCandidate(cand);
+            }
+        }
     }
 
     public void createOffer(final String peerEmail) {
@@ -242,12 +261,20 @@ public class WebRTCManager {
 
     public void addRemoteIceCandidate(final String peerEmail, String sdp, String sdpMid, int sdpMLineIndex) {
         PeerConnection pc = peerConnections.get(peerEmail);
+        IceCandidate candidate = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
         if (pc != null) {
-            pc.addIceCandidate(new IceCandidate(sdpMid, sdpMLineIndex, sdp));
+            pc.addIceCandidate(candidate);
+        } else {
+            Log.d(TAG, "Queueing remote ICE candidate for: " + peerEmail);
+            if (!queuedRemoteCandidates.containsKey(peerEmail)) {
+                queuedRemoteCandidates.put(peerEmail, Collections.synchronizedList(new java.util.ArrayList<IceCandidate>()));
+            }
+            queuedRemoteCandidates.get(peerEmail).add(candidate);
         }
     }
 
     public void closePeer(final String peerEmail) {
+        queuedRemoteCandidates.remove(peerEmail);
         PeerConnection pc = peerConnections.remove(peerEmail);
         if (pc != null) {
             pc.dispose();
@@ -281,6 +308,7 @@ public class WebRTCManager {
             entry.getValue().dispose();
         }
         peerConnections.clear();
+        queuedRemoteCandidates.clear();
 
         if (localAudioTrack != null) {
             localAudioTrack.dispose();

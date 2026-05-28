@@ -60,6 +60,8 @@ qt_add_qml_module(DialSome
         icons/add.png
         icons/volume_on.png
         icons/volume_off.png
+        icons/mic_on.png
+        icons/mic_off.png
 )
 
 qt_add_resources(DialSome "configs"

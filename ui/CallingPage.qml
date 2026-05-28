@@ -58,7 +58,7 @@ ColumnLayout {
     RowLayout {
         Layout.alignment: Qt.AlignHCenter
         Layout.bottomMargin: 25
-        spacing: 40
+        spacing: 25
 
         // Speaker Toggle Button
         Rectangle {
@@ -84,6 +84,33 @@ ColumnLayout {
                 anchors.fill: parent
                 onClicked: {
                     myBackend.setSpeakerOn(!myBackend.speakerOn);
+                }
+            }
+        }
+
+        // Microphone Mute Button
+        Rectangle {
+            id: micMuteBtn
+            color: myBackend.micMuted ? "#FFFFFF" : "#4A4A4A"
+            height: 60
+            width: height
+            radius: height / 2
+
+            Image {
+                source: myBackend.micMuted ? "../icons/mic_off.png" : "../icons/mic_on.png"
+                sourceSize.width: 30
+                sourceSize.height: 30
+                anchors.centerIn: parent
+
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                mipmap: true
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    myBackend.setMicMuted(!myBackend.micMuted);
                 }
             }
         }

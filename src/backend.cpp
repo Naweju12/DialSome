@@ -591,6 +591,7 @@ void Backend::endCall() {
 
     this->m_activePeers.clear();
     this->m_heldPeers.clear();
+    this->m_micMuted = false;
     this->m_callerEmail = ""; 
     this->m_callerName = "";
     this->m_isCaller = false;
@@ -600,6 +601,7 @@ void Backend::endCall() {
     emit this->callEnded();
     emit this->callerInfoChanged();
     emit this->heldPeersChanged();
+    emit this->micMutedChanged();
 }
 
 QString Backend::callerEmail() const {
@@ -834,5 +836,18 @@ void Backend::mergeCalls() {
     // 3. Update message
     setMessage("Call Connected! Active peers: " + m_activePeers.join(", "));
 }
+
+void Backend::setMicMuted(bool muted) {
+    if (m_micMuted == muted) return;
+    m_micMuted = muted;
+    emit micMutedChanged();
+
+    #ifdef Q_OS_ANDROID
+    if (m_webrtc.isValid()) {
+        m_webrtc.callMethod<void>("setMicrophoneMuted", "(Z)V", muted);
+    }
+    #endif
+}
+
 
 
