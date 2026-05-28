@@ -202,15 +202,6 @@ public class WebRTCManager {
         // Add the track to PeerConnection to ensure bidirectional "sendrecv" in SDP
         pc.addTrack(localAudioTrack, Collections.singletonList("ARDAMS"));
         peerConnections.put(peerEmail, pc);
-
-        // Drain any queued remote ICE candidates for this peer
-        List<IceCandidate> queued = queuedRemoteCandidates.remove(peerEmail);
-        if (queued != null) {
-            Log.d(TAG, "Draining " + queued.size() + " queued remote ICE candidates for: " + peerEmail);
-            for (IceCandidate cand : queued) {
-                pc.addIceCandidate(cand);
-            }
-        }
     }
 
     public void createOffer(final String peerEmail) {
@@ -237,11 +228,24 @@ public class WebRTCManager {
 
         pc.setRemoteDescription(new SimpleSdpObserver() {
             @Override public void onSetSuccess() {
+                drainQueuedCandidates(peerEmail);
                 if (remoteSdp.type == SessionDescription.Type.OFFER) {
                     createAnswer(peerEmail);
                 }
             }
         }, remoteSdp);
+    }
+
+    private void drainQueuedCandidates(final String peerEmail) {
+        PeerConnection pc = peerConnections.get(peerEmail);
+        if (pc == null) return;
+        List<IceCandidate> queued = queuedRemoteCandidates.remove(peerEmail);
+        if (queued != null) {
+            Log.d(TAG, "Draining " + queued.size() + " queued remote ICE candidates for: " + peerEmail);
+            for (IceCandidate cand : queued) {
+                pc.addIceCandidate(cand);
+            }
+        }
     }
 
     private void createAnswer(final String peerEmail) {
