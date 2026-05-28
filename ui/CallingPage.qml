@@ -2,10 +2,13 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 
-ColumnLayout {
-    id: callPage
-    anchors.fill: parent
-    spacing: 0
+Rectangle {
+    id: callingPageRoot
+    color: Theme.background
+
+    Behavior on color {
+        ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
+    }
 
     property int callDuration: 0
 
@@ -40,49 +43,59 @@ ColumnLayout {
             }
         }
     }
-    // --- CALL STATUS HEADER (Always visible but styled dynamically) ---
+
     ColumnLayout {
-        Layout.fillWidth: true
-        Layout.topMargin: 40
-        Layout.preferredHeight: 110
-        spacing: 8
+        id: callPage
+        anchors.fill: parent
+        anchors.leftMargin: 16
+        anchors.rightMargin: 16
+        anchors.topMargin: 16
+        anchors.bottomMargin: 16
+        spacing: 0
 
-        Text {
-            text: myBackend.activePeers.length > 1 ? "Conference Call" : "Voice Call"
-            color: Theme.textSecondary
-            Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 14
-            font.weight: Font.DemiBold
-            font.letterSpacing: 1
+        // --- CALL STATUS HEADER (Always visible and centered) ---
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 40
+            Layout.preferredHeight: 110
+            spacing: 8
+
+            Text {
+                text: myBackend.activePeers.length > 1 ? "Conference Call" : "Voice Call"
+                color: Theme.textSecondary
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 14
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1
+            }
+
+            Text {
+                text: callingPageRoot.formatDuration(callingPageRoot.callDuration)
+                color: Theme.success
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 32
+                font.weight: Font.Bold
+                visible: myBackend.callConnected
+            }
+
+            Text {
+                text: myBackend.message
+                color: Theme.textSecondary
+                Layout.fillWidth: true
+                horizontalAlignment: Text.AlignHCenter
+                font.pixelSize: 14
+                wrapMode: Text.WordWrap
+            }
         }
 
-        Text {
-            text: callPage.formatDuration(callPage.callDuration)
-            color: Theme.success
-            Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 32
-            font.weight: Font.Bold
-            visible: myBackend.callConnected
-        }
-
-        Text {
-            text: myBackend.message
-            color: Theme.textSecondary
-            Layout.alignment: Qt.AlignHCenter
-            font.pixelSize: 14
-            horizontalAlignment: Text.AlignHCenter
-            wrapMode: Text.WordWrap
-            Layout.preferredWidth: parent.width * 0.8
-        }
-    }
-
-    // --- DYNAMIC CONTENT AREA ---
-    StackLayout {
-        id: callContentStack
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        Layout.margins: 20
-        currentIndex: myBackend.activePeers.length > 1 ? 1 : 0
+        // --- DYNAMIC CONTENT AREA ---
+        StackLayout {
+            id: callContentStack
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            currentIndex: myBackend.activePeers.length > 1 ? 1 : 0
 
         // Slide 0: Single Call UI (Original large avatar and name)
         ColumnLayout {
@@ -500,3 +513,6 @@ ColumnLayout {
         }
     }
 }
+}
+
+
