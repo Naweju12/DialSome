@@ -749,17 +749,21 @@ ColumnLayout {
 
                 // Block/Unblock Action Button
                 ColumnLayout {
+                    id: blockButtonContainer
                     spacing: 6
                     Layout.alignment: Qt.AlignHCenter
 
-                    property bool isBlocked: myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1
+                    property bool isBlocked: {
+                        var trigger = myBackend.blockedUsers;
+                        return myBackend.isUserBlocked(selectedContactEmail);
+                    }
 
                     Rectangle {
                         id: detailsBlockBtn
                         width: 54
                         height: 54
                         radius: 27
-                        color: parent.isBlocked ? Theme.success : Theme.danger
+                        color: blockButtonContainer.isBlocked ? Theme.success : Theme.danger
 
                         Image {
                             source: "../icons/block.png"
@@ -775,7 +779,7 @@ ColumnLayout {
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                if (myBackend.blockedUsers.indexOf(selectedContactEmail) !== -1) {
+                                if (blockButtonContainer.isBlocked) {
                                     myBackend.unblockUser(selectedContactEmail)
                                     myUtils.showToast("Contact unblocked successfully")
                                 } else {

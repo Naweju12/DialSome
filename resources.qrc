@@ -3,5 +3,6 @@
         <file>icons/logo.png</file>
         <file>icons/user.png</file>
         <file>icons/dial.png</file>
+        <file>icons/block.png</file>
     </qresource>
 </RCC>

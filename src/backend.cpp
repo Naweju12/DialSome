@@ -410,6 +410,12 @@ void Backend::onTextMessageReceived(const QString &message) {
     QString sender = json["sender"].toString();
     QString target = json["target"].toString();
 
+    // Ignore messages from blocked users
+    if (isUserBlocked(sender)) {
+        qDebug() << "Ignoring signaling message from blocked user:" << sender;
+        return;
+    }
+
     // 1. If targeted message and not for us, ignore it
     if (json.contains("target") && !target.isEmpty() && target != this->m_myEmail) {
         return;
@@ -1042,15 +1048,25 @@ void Backend::disconnectPeer(const QString &email) {
     removeActivePeer(email);
 }
 
+bool Backend::isUserBlocked(const QString &email) const {
+    QString trimmed = email.trimmed();
+    for (const QString &blocked : m_blockedUsers) {
+        if (blocked.compare(trimmed, Qt::CaseInsensitive) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void Backend::blockUser(const QString &email) {
     if (email.isEmpty()) return;
     QString trimmed = email.trimmed();
-    if (!m_blockedUsers.contains(trimmed)) {
-        m_blockedUsers.append(trimmed);
+    if (!isUserBlocked(trimmed)) {
+        m_blockedUsers.append(trimmed.toLower());
         
         QJsonArray arr;
         for (const QString &blocked : m_blockedUsers) {
-            arr.append(blocked);
+            arr.append(blocked.toLower());
         }
         QJsonDocument doc(arr);
         m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
@@ -1062,12 +1078,17 @@ void Backend::blockUser(const QString &email) {
 
 void Backend::unblockUser(const QString &email) {
     QString trimmed = email.trimmed();
-    if (m_blockedUsers.contains(trimmed)) {
-        m_blockedUsers.removeAll(trimmed);
-        
+    bool found = false;
+    for (int i = m_blockedUsers.size() - 1; i >= 0; --i) {
+        if (m_blockedUsers[i].compare(trimmed, Qt::CaseInsensitive) == 0) {
+            m_blockedUsers.removeAt(i);
+            found = true;
+        }
+    }
+    if (found) {
         QJsonArray arr;
         for (const QString &blocked : m_blockedUsers) {
-            arr.append(blocked);
+            arr.append(blocked.toLower());
         }
         QJsonDocument doc(arr);
         m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
@@ -1075,11 +1096,6 @@ void Backend::unblockUser(const QString &email) {
         emit blockedUsersChanged();
         qDebug() << "User unblocked successfully:" << trimmed;
     }
-}
-
-bool Backend::isUserBlocked(const QString &email) const {
-    QString trimmed = email.trimmed();
-    return m_blockedUsers.contains(trimmed);
 }
 
 
