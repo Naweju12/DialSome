@@ -76,7 +76,6 @@ Rectangle {
 
             delegate: ItemDelegate {
                 width: selectContactsView.width
-                height: 70
 
                 // Filter logic
                 visible: modelData.name.toLowerCase().indexOf(searchBar.text.toLowerCase()) !== -1 ||
