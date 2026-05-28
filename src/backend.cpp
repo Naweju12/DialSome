@@ -307,6 +307,7 @@ void Backend::startCall(const QString &email) {
     this->m_callerEmail = email;
     this->m_callerName = callerNameForEmail(email);
     this->setMessage("Connecting to the server...");
+    emit this->isCallerChanged();
     emit this->startingCall();
     emit this->callerInfoChanged();
 
@@ -362,6 +363,7 @@ void Backend::joinCall(const QString &roomId, const QString &email, const QStrin
 
             this->m_isCaller = false;
             this->m_currentRoomId = roomId;
+            emit this->isCallerChanged();
 
             // Skip the POST request! We already have the roomId.
             this->setMessage("Joining room: " + roomId);
@@ -683,6 +685,7 @@ void Backend::endCall() {
     emit this->heldPeersChanged();
     emit this->micMutedChanged();
     emit this->callConnectedChanged();
+    emit this->isCallerChanged();
 }
 
 QString Backend::callerEmail() const {

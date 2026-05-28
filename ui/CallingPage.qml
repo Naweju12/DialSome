@@ -14,7 +14,7 @@ Rectangle {
     }
 
     Component.onCompleted: {
-        if (!myBackend.callConnected) {
+        if (myBackend.isCaller && !myBackend.callConnected) {
             ringbackSound.play()
         }
     }
