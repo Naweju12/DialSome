@@ -31,6 +31,7 @@ Backend::Backend(QObject *parent) : QObject(parent) {
             m_blockedUsers.append(var.toString());
         }
     }
+    syncBlockedUsersToJava();
 
 
     connect(this, &Backend::settingsLoaded, this, [this]() {
@@ -1058,6 +1059,35 @@ bool Backend::isUserBlocked(const QString &email) const {
     return false;
 }
 
+void Backend::syncBlockedUsersToJava() {
+#ifdef Q_OS_ANDROID
+    QJniEnvironment env;
+    jclass clazz = env->FindClass("com/github/biltudas1/dialsome/CallStateManager");
+    if (!clazz) return;
+
+    // Get the blockedUsers Set field
+    jfieldID fieldId = env->GetStaticFieldID(clazz, "blockedUsers", "Ljava/util/Set;");
+    if (!fieldId) return;
+    jobject jSet = env->GetStaticObjectField(clazz, fieldId);
+    if (!jSet) return;
+
+    // Get Set.clear() and Set.add() methods
+    jclass setClass = env->FindClass("java/util/Set");
+    jmethodID clearId = env->GetMethodID(setClass, "clear", "()V");
+    jmethodID addId  = env->GetMethodID(setClass, "add", "(Ljava/lang/Object;)Z");
+
+    env->CallVoidMethod(jSet, clearId);
+    for (const QString &blocked : m_blockedUsers) {
+        jstring jEmail = env->NewStringUTF(blocked.toLower().toUtf8().constData());
+        env->CallBooleanMethod(jSet, addId, jEmail);
+        env->DeleteLocalRef(jEmail);
+    }
+    env->DeleteLocalRef(jSet);
+    env->DeleteLocalRef(clazz);
+    qDebug() << "Synced" << m_blockedUsers.size() << "blocked users to Java.";
+#endif
+}
+
 void Backend::blockUser(const QString &email) {
     if (email.isEmpty()) return;
     QString trimmed = email.trimmed();
@@ -1071,6 +1101,7 @@ void Backend::blockUser(const QString &email) {
         QJsonDocument doc(arr);
         m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
         
+        syncBlockedUsersToJava();
         emit blockedUsersChanged();
         qDebug() << "User blocked successfully:" << trimmed;
     }
@@ -1093,6 +1124,7 @@ void Backend::unblockUser(const QString &email) {
         QJsonDocument doc(arr);
         m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
         
+        syncBlockedUsersToJava();
         emit blockedUsersChanged();
         qDebug() << "User unblocked successfully:" << trimmed;
     }

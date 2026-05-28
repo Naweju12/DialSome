@@ -51,6 +51,13 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                 String callerName = data.get("caller_name");
 
                 Log.d(TAG, "FCM Signal: " + type + " Room: " + roomId + " From: " + callerEmail + "(" + callerName + ")");
+
+                // Block check — silently drop if caller is blocked
+                if (CallStateManager.isBlocked(callerEmail)) {
+                    Log.d(TAG, "Blocked incoming call from: " + callerEmail + ". Ignoring.");
+                    return;
+                }
+
                 CallStateManager.isIncomingCallRinging = true;
                 wakeUpApp(callerEmail, roomId, callerName);
             } else if ("end_call".equals(type)) {

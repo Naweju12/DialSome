@@ -62,6 +62,7 @@ qt_add_qml_module(DialSome
         icons/settings.png
         icons/server.png
         icons/add.png
+        icons/block.png
         icons/volume_on.png
         icons/volume_off.png
         icons/mic_on.png

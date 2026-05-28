@@ -118,6 +118,7 @@ private slots:
     void onConnected();
 
 private:
+    void syncBlockedUsersToJava();
     QString m_message = "Ready";
     QNetworkAccessManager m_networkManager;
     QWebSocket m_webSocket;
