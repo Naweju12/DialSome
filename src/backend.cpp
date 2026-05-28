@@ -466,6 +466,11 @@ void Backend::onTextMessageReceived(const QString &message) {
                                       json["sdpMLineIndex"].toInt());
         }
     }
+    else if (type == "leave") {
+        if (sender == this->m_myEmail) return;
+        qDebug() << "Peer left:" << sender;
+        removeActivePeer(sender);
+    }
 }
 
 QString Backend::message() const { return m_message; }
@@ -562,18 +567,59 @@ void Backend::requestNotificationPermission() {
 }
 
 void Backend::endCall() {
-    if (this->m_api != nullptr && !this->m_callerEmail.isEmpty()) {
-        qDebug() << "Notifying server to end call with peer:" << this->m_callerEmail;
-        this->m_api->end_call(this->m_callerEmail, this->m_jwtAccessToken);
+    bool shouldSendEndCallApi = false;
+    QString peersToNotify = "";
+
+    if (this->m_api != nullptr) {
+        if (this->m_isCaller) {
+            // Case 1: Initiator ends the call. Notify all participants (active, held, and initial callee)
+            QStringList list;
+            if (!this->m_callerEmail.isEmpty()) {
+                for (const QString &email : this->m_callerEmail.split(",")) {
+                    QString trimmed = email.trimmed();
+                    if (!trimmed.isEmpty() && !list.contains(trimmed)) {
+                        list.append(trimmed);
+                    }
+                }
+            }
+            for (const QString &peer : this->m_activePeers) {
+                if (!peer.isEmpty() && !list.contains(peer)) {
+                    list.append(peer);
+                }
+            }
+            for (const QString &peer : this->m_heldPeers) {
+                if (!peer.isEmpty() && !list.contains(peer)) {
+                    list.append(peer);
+                }
+            }
+            if (!list.isEmpty()) {
+                peersToNotify = list.join(",");
+                shouldSendEndCallApi = true;
+            }
+        } else if (!this->m_incomingRoomId.isEmpty() && !this->m_callerEmail.isEmpty()) {
+            // Case 2: Callee rejects an incoming call before answering. Notify the caller to stop ringing.
+            peersToNotify = this->m_callerEmail;
+            shouldSendEndCallApi = true;
+        }
     }
-    
+
+    if (shouldSendEndCallApi && !peersToNotify.isEmpty()) {
+        qDebug() << "Notifying server to end call for:" << peersToNotify;
+        this->m_api->end_call(peersToNotify, this->m_jwtAccessToken);
+    }
+
+    // Case 3: Active callee leaves. Notify active peers over websocket first
+    if (m_webSocket.isValid()) {
+        QJsonObject leaveJson;
+        leaveJson["type"] = "leave";
+        leaveJson["sender"] = this->m_myEmail;
+        m_webSocket.sendTextMessage(QJsonDocument(leaveJson).toJson(QJsonDocument::Compact));
+        m_webSocket.close();
+    }
+
     if (this->m_webrtc.isValid()) {
         this->m_webrtc.callMethod<void>("close", "()V");
         this->m_webrtc = QJniObject(); // Clear the object
-    }
-
-    if (m_webSocket.isValid()) {
-        m_webSocket.close();
     }
 
     // Clear the Android notification in case they hit "Reject" on the QML UI
@@ -596,6 +642,7 @@ void Backend::endCall() {
     this->m_callerName = "";
     this->m_isCaller = false;
     this->m_currentRoomId = "";
+    this->m_incomingRoomId = "";
 
     qDebug() << "Call Ended";
     emit this->callEnded();

@@ -19,6 +19,7 @@ public class WebRTCManager {
     private PeerConnectionFactory factory;
     private final Map<String, PeerConnection> peerConnections = new ConcurrentHashMap<>();
     private final Map<String, List<IceCandidate>> queuedRemoteCandidates = new ConcurrentHashMap<>();
+    private final java.util.Set<String> activeRemoteDescriptions = java.util.Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private AudioSource audioSource;
     private AudioTrack localAudioTrack;
     private AudioManager audioManager;
@@ -228,6 +229,7 @@ public class WebRTCManager {
 
         pc.setRemoteDescription(new SimpleSdpObserver() {
             @Override public void onSetSuccess() {
+                activeRemoteDescriptions.add(peerEmail);
                 drainQueuedCandidates(peerEmail);
                 if (remoteSdp.type == SessionDescription.Type.OFFER) {
                     createAnswer(peerEmail);
@@ -266,7 +268,7 @@ public class WebRTCManager {
     public void addRemoteIceCandidate(final String peerEmail, String sdp, String sdpMid, int sdpMLineIndex) {
         PeerConnection pc = peerConnections.get(peerEmail);
         IceCandidate candidate = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
-        if (pc != null) {
+        if (pc != null && activeRemoteDescriptions.contains(peerEmail)) {
             pc.addIceCandidate(candidate);
         } else {
             Log.d(TAG, "Queueing remote ICE candidate for: " + peerEmail);
@@ -278,6 +280,7 @@ public class WebRTCManager {
     }
 
     public void closePeer(final String peerEmail) {
+        activeRemoteDescriptions.remove(peerEmail);
         queuedRemoteCandidates.remove(peerEmail);
         PeerConnection pc = peerConnections.remove(peerEmail);
         if (pc != null) {
@@ -313,6 +316,7 @@ public class WebRTCManager {
         }
         peerConnections.clear();
         queuedRemoteCandidates.clear();
+        activeRemoteDescriptions.clear();
 
         if (localAudioTrack != null) {
             localAudioTrack.dispose();
