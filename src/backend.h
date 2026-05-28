@@ -37,10 +37,15 @@ class Backend : public QObject {
     Q_PROPERTY(bool callConnected READ callConnected NOTIFY callConnectedChanged)
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(QStringList activePeers READ activePeers NOTIFY callerInfoChanged)
+    Q_PROPERTY(QStringList blockedUsers READ blockedUsers NOTIFY blockedUsersChanged)
 public:
     explicit Backend(QObject *parent = nullptr);
     QStringList activePeers() const { return m_activePeers; }
+    QStringList blockedUsers() const { return m_blockedUsers; }
     Q_INVOKABLE void disconnectPeer(const QString &email);
+    Q_INVOKABLE void blockUser(const QString &email);
+    Q_INVOKABLE void unblockUser(const QString &email);
+    Q_INVOKABLE bool isUserBlocked(const QString &email) const;
     QString appVersion() const;
     QString message() const;
     void setMessage(const QString &msg);
@@ -103,6 +108,7 @@ signals:
     void heldPeersChanged();
     void micMutedChanged();
     void callConnectedChanged();
+    void blockedUsersChanged();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -132,6 +138,7 @@ private:
     QStringList m_activePeers;
     QStringList m_heldPeers;
     bool m_micMuted = false;
+    QStringList m_blockedUsers;
 };
 
 #endif

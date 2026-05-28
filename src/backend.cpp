@@ -23,6 +23,16 @@ Backend::Backend(QObject *parent) : QObject(parent) {
         m_recentCalls = doc.toVariant().toList();
     }
 
+    QString blockedJson = m_storage->get("blocked_users");
+    if (!blockedJson.isEmpty()) {
+        QJsonDocument doc = QJsonDocument::fromJson(blockedJson.toUtf8());
+        QVariantList varList = doc.toVariant().toList();
+        for (const QVariant &var : varList) {
+            m_blockedUsers.append(var.toString());
+        }
+    }
+
+
     connect(this, &Backend::settingsLoaded, this, [this]() {
         QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost();
         QUrl url(hostUrl);
@@ -519,6 +529,14 @@ void Backend::Startup() {
     });
 
     connect(this->m_fcm, &FCMManager::callSignalReceived, this, [this](const QString &roomId, const QString &email, const QString &roomName) {
+        if (isUserBlocked(email)) {
+            qDebug() << "Blocking incoming call from:" << email;
+            if (this->m_api != nullptr) {
+                this->m_api->end_call(email, this->m_jwtAccessToken);
+            }
+            return;
+        }
+
         qDebug() << "Incoming call screen triggered";
         this->setMessage("Incoming call from " + email);
         this->saveToHistory(email, roomName, true);
@@ -661,6 +679,19 @@ QString Backend::callerEmail() const {
 
 QString Backend::callerName() const {
     if (!m_activePeers.isEmpty()) {
+        if (m_activePeers.size() == 1) {
+            QString email = m_activePeers.first();
+            for (const QVariant &c : m_contacts) {
+                QVariantMap map = c.toMap();
+                if (map["email"].toString().trimmed().compare(email.trimmed(), Qt::CaseInsensitive) == 0) {
+                    return map["name"].toString();
+                }
+            }
+            if (email.contains("@")) {
+                return email.split("@").first();
+            }
+            return email;
+        }
         return m_activePeers.join(", ");
     }
     return this->m_callerName;
@@ -933,6 +964,47 @@ void Backend::disconnectPeer(const QString &email) {
     }
     removeActivePeer(email);
 }
+
+void Backend::blockUser(const QString &email) {
+    if (email.isEmpty()) return;
+    QString trimmed = email.trimmed();
+    if (!m_blockedUsers.contains(trimmed)) {
+        m_blockedUsers.append(trimmed);
+        
+        QJsonArray arr;
+        for (const QString &blocked : m_blockedUsers) {
+            arr.append(blocked);
+        }
+        QJsonDocument doc(arr);
+        m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
+        
+        emit blockedUsersChanged();
+        qDebug() << "User blocked successfully:" << trimmed;
+    }
+}
+
+void Backend::unblockUser(const QString &email) {
+    QString trimmed = email.trimmed();
+    if (m_blockedUsers.contains(trimmed)) {
+        m_blockedUsers.removeAll(trimmed);
+        
+        QJsonArray arr;
+        for (const QString &blocked : m_blockedUsers) {
+            arr.append(blocked);
+        }
+        QJsonDocument doc(arr);
+        m_storage->save("blocked_users", doc.toJson(QJsonDocument::Compact));
+        
+        emit blockedUsersChanged();
+        qDebug() << "User unblocked successfully:" << trimmed;
+    }
+}
+
+bool Backend::isUserBlocked(const QString &email) const {
+    QString trimmed = email.trimmed();
+    return m_blockedUsers.contains(trimmed);
+}
+
 
 
 

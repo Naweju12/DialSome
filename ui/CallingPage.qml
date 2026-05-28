@@ -53,43 +53,6 @@ Rectangle {
         anchors.bottomMargin: 16
         spacing: 0
 
-        // --- CALL STATUS HEADER (Always visible and centered) ---
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.topMargin: 40
-            Layout.preferredHeight: 110
-            spacing: 8
-
-            Text {
-                text: myBackend.activePeers.length > 1 ? "Conference Call" : "Voice Call"
-                color: Theme.textSecondary
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1
-            }
-
-            Text {
-                text: callingPageRoot.formatDuration(callingPageRoot.callDuration)
-                color: Theme.success
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                font.pixelSize: 32
-                font.weight: Font.Bold
-                visible: myBackend.callConnected
-            }
-
-            Text {
-                text: myBackend.message
-                color: Theme.textSecondary
-                Layout.fillWidth: true
-                horizontalAlignment: Text.AlignHCenter
-                font.pixelSize: 14
-                wrapMode: Text.WordWrap
-            }
-        }
-
         // --- DYNAMIC CONTENT AREA ---
         StackLayout {
             id: callContentStack
@@ -97,78 +60,139 @@ Rectangle {
             Layout.fillHeight: true
             currentIndex: myBackend.activePeers.length > 1 ? 1 : 0
 
-        // Slide 0: Single Call UI (Original large avatar and name)
-        ColumnLayout {
-            spacing: 20
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+            // Slide 0: Single Call UI (Avatar -> Name -> Duration)
+            ColumnLayout {
+                spacing: 24
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-            Item { Layout.fillHeight: true } // spacer
+                Item {
+                    Layout.fillHeight: true
+                }
 
-            // Avatar
-            Rectangle {
-                Layout.alignment: Qt.AlignHCenter
-                width: 120
-                height: 120
-                radius: 60
-                color: "transparent"
-                border.color: Theme.accent
-                border.width: 2
-
+                // Avatar centered at top
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: 110
-                    height: 110
-                    radius: 55
-                    color: Theme.surfaceVariant
+                    Layout.alignment: Qt.AlignHCenter
+                    width: 140
+                    height: 140
+                    radius: 70
+                    color: "transparent"
+                    border.color: Theme.accent
+                    border.width: 2
 
-                    Image {
-                        source: "../icons/user.png"
-                        sourceSize.width: 110
-                        sourceSize.height: 110
+                    Rectangle {
                         anchors.centerIn: parent
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        mipmap: true
+                        width: 128
+                        height: 128
+                        radius: 64
+                        color: Theme.surfaceVariant
+
+                        Image {
+                            source: "../icons/user.png"
+                            sourceSize.width: 128
+                            sourceSize.height: 128
+                            anchors.centerIn: parent
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            mipmap: true
+                        }
+                    }
+
+                    SequentialAnimation on border.width {
+                        running: myBackend.callConnected && myBackend.activePeers.length <= 1
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 4; duration: 1000; easing.type: Easing.InOutSine }
+                        NumberAnimation { to: 1.5; duration: 1000; easing.type: Easing.InOutSine }
                     }
                 }
 
-                SequentialAnimation on border.width {
-                    running: myBackend.callConnected && myBackend.activePeers.length <= 1
-                    loops: Animation.Infinite
-                    NumberAnimation { to: 4; duration: 1000; easing.type: Easing.InOutSine }
-                    NumberAnimation { to: 1.5; duration: 1000; easing.type: Easing.InOutSine }
+                // Name (centered)
+                Text {
+                    text: myBackend.callerName
+                    color: Theme.textPrimary
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: 32
+                    font.weight: Font.DemiBold
+                    wrapMode: Text.WordWrap
+                }
+
+                // Email (centered, soft text)
+                Text {
+                    text: myBackend.callerEmail
+                    color: Theme.textSecondary
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: 15
+                    elide: Text.ElideRight
+                }
+
+                // Call Duration or Connection message (centered)
+                Text {
+                    text: myBackend.callConnected ? callingPageRoot.formatDuration(callingPageRoot.callDuration) : myBackend.message
+                    color: myBackend.callConnected ? Theme.success : Theme.textSecondary
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: myBackend.callConnected ? 32 : 16
+                    font.weight: myBackend.callConnected ? Font.Bold : Font.Medium
+                }
+
+                Item {
+                    Layout.fillHeight: true
                 }
             }
 
-            Text {
-                text: myBackend.callerName
-                color: Theme.textPrimary
-                Layout.alignment: Qt.AlignHCenter
-                font.pixelSize: 26
-                font.weight: Font.DemiBold
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                Layout.preferredWidth: parent.width * 0.9
-            }
+            // Slide 1: Conference Call UI (List of participants)
+            ColumnLayout {
+                spacing: 12
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
-            Item { Layout.fillHeight: true } // spacer
-        }
+                // --- CONFERENCE STATUS HEADER ---
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 20
+                    Layout.preferredHeight: 110
+                    spacing: 8
 
-        // Slide 1: Conference Call UI (List of participants)
-        ColumnLayout {
-            spacing: 12
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+                    Text {
+                        text: "Conference Call"
+                        color: Theme.textSecondary
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 1
+                    }
 
-            Text {
-                text: "PARTICIPANTS (" + (myBackend.activePeers.length + 1) + ")"
-                color: Theme.textSecondary
-                font.pixelSize: 12
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1
-                Layout.leftMargin: 8
-            }
+                    Text {
+                        text: callingPageRoot.formatDuration(callingPageRoot.callDuration)
+                        color: Theme.success
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 32
+                        font.weight: Font.Bold
+                        visible: myBackend.callConnected
+                    }
+
+                    Text {
+                        text: myBackend.message
+                        color: Theme.textSecondary
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 14
+                        wrapMode: Text.WordWrap
+                    }
+                }
+
+                Text {
+                    text: "PARTICIPANTS (" + (myBackend.activePeers.length + 1) + ")"
+                    color: Theme.textSecondary
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                    Layout.leftMargin: 8
+                }
 
             ListView {
                 id: participantsList
