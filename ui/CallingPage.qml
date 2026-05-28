@@ -9,7 +9,7 @@ Rectangle {
 
     SoundEffect {
         id: ringbackSound
-        source: "qrc:/DialSome/sounds/ringback.wav"
+        source: "qrc:/qt/qml/DialSome/sounds/ringback.wav"
         loops: SoundEffect.Infinite
     }
 
