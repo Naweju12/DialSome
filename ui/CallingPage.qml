@@ -8,7 +8,7 @@ Rectangle {
     color: Theme.background
 
     function handleBack() {
-        myBackend.endCall()
+        myUtils.moveToBackground()
         return true
     }
 

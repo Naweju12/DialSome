@@ -60,6 +60,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
                 CallStateManager.isIncomingCallRinging = true;
                 wakeUpApp(callerEmail, roomId, callerName);
+
+                try {
+                    onCallMessageReceive(roomId, callerEmail, callerName);
+                } catch (UnsatisfiedLinkError e) {
+                    Log.d(TAG, "Unable to notify C++ about incoming call, C++ is dead");
+                }
             } else if ("end_call".equals(type)) {
                 NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
                 nm.cancel(INCOMING_CALL_NOTIF_ID);
@@ -91,6 +97,49 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                             .setPriority(NotificationCompat.PRIORITY_DEFAULT);
 
                     nm.notify(1002, missedCallBuilder.build());
+
+                    // Save to SecureStorage if the C++ app is NOT running (background/dead)
+                    if (!CallStateManager.isAppRunning) {
+                        try {
+                            SecureStorage storage = new SecureStorage(this);
+                            String historyJson = storage.getData("call_history");
+                            org.json.JSONArray historyArray;
+                            if (historyJson == null || historyJson.isEmpty()) {
+                                historyArray = new org.json.JSONArray();
+                            } else {
+                                historyArray = new org.json.JSONArray(historyJson);
+                            }
+
+                            // Create the new missed call log
+                            org.json.JSONObject logObj = new org.json.JSONObject();
+                            logObj.put("email", callerEmail);
+                            logObj.put("name", callerName != null ? callerName : callerEmail);
+                            logObj.put("isIncoming", true);
+                            logObj.put("isMissed", true);
+                            
+                            // Current time in ISO 8601 format
+                            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US);
+                            String isoTimestamp = sdf.format(new java.util.Date());
+                            logObj.put("timestamp", isoTimestamp);
+
+                            // Prepend to array
+                            org.json.JSONArray newArray = new org.json.JSONArray();
+                            newArray.put(logObj);
+                            for (int i = 0; i < historyArray.length(); i++) {
+                                newArray.put(historyArray.get(i));
+                            }
+
+                            // Limit to 50
+                            while (newArray.length() > 50) {
+                                newArray.remove(newArray.length() - 1);
+                            }
+
+                            storage.saveData("call_history", newArray.toString());
+                            Log.d(TAG, "Missed call saved to SecureStorage call_history from background.");
+                        } catch (Exception e) {
+                            Log.e(TAG, "Failed to save missed call in background: " + e.getMessage());
+                        }
+                    }
                 }
 
                 // Reset the state for the next time a call comes in

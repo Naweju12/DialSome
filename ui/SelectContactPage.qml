@@ -39,7 +39,11 @@ Rectangle {
                 MouseArea {
                     id: backContactArea
                     anchors.fill: parent
-                    onClicked: mainStack.pop()
+                    onClicked: {
+                        selectContactPage.forceActiveFocus()
+                        Qt.inputMethod.hide()
+                        mainStack.pop()
+                    }
                     onPressed: parent.scale = 0.9
                     onReleased: parent.scale = 1.0
                 }
@@ -66,6 +70,7 @@ Rectangle {
             color: Theme.textPrimary
             placeholderTextColor: Theme.textSecondary
             font.pixelSize: 15
+            inputMethodHints: Qt.ImhNoPredictiveText
 
             background: Rectangle {
                 implicitHeight: 48
@@ -78,6 +83,9 @@ Rectangle {
                     ColorAnimation { duration: 200 }
                 }
             }
+
+            onTextChanged: selectContactsView.filterContacts()
+            onDisplayTextChanged: selectContactsView.filterContacts()
         }
 
         // --- CONTACTS LIST ---
@@ -86,16 +94,40 @@ Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: myBackend.contacts
+
+            property var filteredModel: myBackend.contacts
+
+            function filterContacts() {
+                var list = myBackend.contacts;
+                var query = searchBar.displayText.toLowerCase().trim();
+                if (query === "") {
+                    filteredModel = list;
+                } else {
+                    var result = [];
+                    for (var i = 0; i < list.length; i++) {
+                        var item = list[i];
+                        if ((item.name && item.name.toLowerCase().indexOf(query) !== -1) ||
+                            (item.email && item.email.toLowerCase().indexOf(query) !== -1)) {
+                            result.push(item);
+                        }
+                    }
+                    filteredModel = result;
+                }
+            }
+
+            model: filteredModel
             spacing: 6
+
+            Connections {
+                target: myBackend
+                function onContactsChanged() {
+                    selectContactsView.filterContacts();
+                }
+            }
 
             delegate: ItemDelegate {
                 width: selectContactsView.width
-
-                // Filter logic
-                visible: modelData.name.toLowerCase().indexOf(searchBar.text.toLowerCase()) !== -1 ||
-                         modelData.email.toLowerCase().indexOf(searchBar.text.toLowerCase()) !== -1
-                height: visible ? 72 : 0
+                height: 72
 
                 background: Rectangle {
                     color: parent.pressed ? Theme.cardHover : Theme.card
@@ -169,6 +201,8 @@ Rectangle {
                             id: dialIconArea
                             anchors.fill: parent
                             onClicked: {
+                                selectContactPage.forceActiveFocus()
+                                Qt.inputMethod.hide()
                                 myBackend.dialNewParticipant(modelData.email);
                                 mainStack.pop();
                             }
@@ -177,6 +211,8 @@ Rectangle {
                 }
 
                 onClicked: {
+                    selectContactPage.forceActiveFocus()
+                    Qt.inputMethod.hide()
                     myBackend.dialNewParticipant(modelData.email);
                     mainStack.pop();
                 }

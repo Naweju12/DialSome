@@ -61,7 +61,11 @@ Rectangle {
                         MouseArea {
                             id: backArea
                             anchors.fill: parent
-                            onClicked: mainStack.pop()
+                            onClicked: {
+                                windowRoot.forceActiveFocus()
+                                Qt.inputMethod.hide()
+                                mainStack.pop()
+                            }
                             onPressed: parent.scale = 0.9
                             onReleased: parent.scale = 1.0
                         }
@@ -353,6 +357,11 @@ Rectangle {
         modal: true
         focus: true
         closePolicy: Popup.CloseOnPressOutside
+
+        onClosed: {
+            windowRoot.forceActiveFocus()
+            Qt.inputMethod.hide()
+        }
 
         background: Rectangle {
             color: Theme.popupBackground

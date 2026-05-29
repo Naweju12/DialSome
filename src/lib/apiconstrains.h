@@ -22,5 +22,6 @@ namespace API {
   namespace Contact {
     const QString contactList = "/users/contacts";
     const QString addContact = "/users/add";
+    const QString removeContact = "/users/ban";
   }
 }

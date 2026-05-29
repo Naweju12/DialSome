@@ -19,7 +19,7 @@ ApplicationWindow {
         ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
     }
 
-    onClosing: {
+    onClosing: close => {
         if (mainStack.currentItem && typeof mainStack.currentItem.handleBack === "function") {
             if (mainStack.currentItem.handleBack()) {
                 close.accepted = false
@@ -104,6 +104,19 @@ ApplicationWindow {
         }
         function onCallEnded() {
             mainStack.pop()
+        }
+        function onBackPressed() {
+            if (mainStack.currentItem && typeof mainStack.currentItem.handleBack === "function") {
+                if (mainStack.currentItem.handleBack()) {
+                    return
+                }
+            }
+
+            if (mainStack.depth > 1) {
+                mainStack.pop()
+            } else {
+                Qt.quit()
+            }
         }
     }
 }

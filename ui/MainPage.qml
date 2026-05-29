@@ -176,7 +176,11 @@ ColumnLayout {
 
                     MouseArea {
                         anchors.fill: parent
-                        onClicked: optionsSection.selectedIndex = index
+                        onClicked: {
+                            optionsSection.selectedIndex = index
+                            mainPage.forceActiveFocus()
+                            Qt.inputMethod.hide()
+                        }
                     }
 
                     Behavior on color {
@@ -316,118 +320,107 @@ ColumnLayout {
 
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 3
+                        spacing: 4
                         Text {
                             text: modelData.name
                             color: Theme.textPrimary
                             font.weight: Font.DemiBold
                             font.pixelSize: 15
                         }
-                        Text {
-                            text: (modelData.isIncoming ? "Incoming" : "Outgoing") + " • " + modelData.email
-                            color: Theme.textSecondary
-                            font.pixelSize: 12
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
-                        }
-                    }
-
-                    // Call action hint
-                    Rectangle {
-                        width: 32; height: 32; radius: 16
-                        color: Theme.accentSoft
-                        ThemedIcon {
-                            source: "../icons/dial.png"
-                            iconColor: Theme.accent
-                            sourceSize: Qt.size(16, 16)
-                            width: 16; height: 16
-                            anchors.centerIn: parent
-                        }
-                    }
-                }
-
-                onClicked: {
-                    myBackend.startCall(modelData.email)
-                }
-            }
-        }
-
-        // ===== CONTACTS TAB =====
-        ListView {
-            id: contactsView
-            anchors.fill: parent
-            visible: optionsSection.selectedIndex === 2
-            model: myBackend.contacts
-            clip: true
-            spacing: 6
-
-            delegate: ItemDelegate {
-                width: contactsView.width
-                height: 72
-
-                background: Rectangle {
-                    color: parent.pressed ? Theme.cardHover : Theme.card
-                    radius: 12
-                    border.color: Theme.border
-                    border.width: 1
-                }
-
-                contentItem: RowLayout {
-                    spacing: 14
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
-
-                    Rectangle {
-                        width: 44; height: 44; radius: 22
-                        color: Theme.surfaceVariant
-                        Image {
-                            source: "../icons/user.png"
-                            anchors.centerIn: parent
-                            sourceSize: Qt.size(44, 44)
-                            width: 44; height: 44
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                        }
-                    }
-
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 3
-
                         RowLayout {
-                            spacing: 8
-                            Text {
-                                text: modelData.name
-                                color: Theme.textPrimary
-                                font.weight: Font.DemiBold
-                                font.pixelSize: 15
+                            Layout.fillWidth: true
+                            spacing: 6
+
+                            // Tiny call status icon
+                            ThemedIcon {
+                                source: {
+                                    if (modelData.isIncoming) {
+                                        return modelData.isMissed ? "../icons/missed_call.png" : "../icons/call_received.png";
+                                    }
+                                    return "../icons/call_send.png";
+                                }
+                                iconColor: {
+                                    if (modelData.isIncoming && modelData.isMissed) {
+                                        return Theme.danger;
+                                    }
+                                    return Theme.textSecondary;
+                                }
+                                width: 14
+                                height: 14
+                                sourceSize: Qt.size(14, 14)
+                                Layout.alignment: Qt.AlignVCenter
                             }
-                            
-                            Rectangle {
-                                visible: myBackend.blockedUsers.indexOf(modelData.email) !== -1
-                                implicitWidth: 50
-                                implicitHeight: 18
-                                color: Theme.dangerSoft
-                                border.color: Theme.danger
-                                border.width: 1
-                                radius: 4
-                                
+
+                            // Total talk duration (if present and > 0)
+                            Text {
+                                text: {
+                                    var seconds = modelData.duration;
+                                    if (!seconds || seconds <= 0) return "";
+                                    var mins = Math.floor(seconds / 60);
+                                    var secs = seconds % 60;
+                                    if (mins > 0) {
+                                        return mins + "m " + secs + "s";
+                                    }
+                                    return secs + "s";
+                                }
+                                color: (modelData.isIncoming && modelData.isMissed) ? Theme.danger : Theme.textSecondary
+                                font.pixelSize: 12
+                                font.weight: (modelData.isIncoming && modelData.isMissed) ? Font.DemiBold : Font.Normal
+                                visible: text !== ""
+                                Layout.alignment: Qt.AlignVCenter
+                            }
+
+                            // Marquee email address container
+                            Item {
+                                id: marqueeContainer
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 16
+                                clip: true
+                                Layout.alignment: Qt.AlignVCenter
+
                                 Text {
-                                    anchors.centerIn: parent
-                                    text: "Blocked"
-                                    color: Theme.danger
-                                    font.pixelSize: 9
-                                    font.weight: Font.DemiBold
+                                    id: emailText
+                                    text: modelData.email
+                                    color: (modelData.isIncoming && modelData.isMissed) ? Theme.danger : Theme.textSecondary
+                                    font.pixelSize: 12
+                                    font.weight: (modelData.isIncoming && modelData.isMissed) ? Font.DemiBold : Font.Normal
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    readonly property bool needsScroll: width > marqueeContainer.width
+
+                                    SequentialAnimation on x {
+                                        id: marqueeAnim
+                                        running: emailText.needsScroll
+                                        loops: Animation.Infinite
+
+                                        PauseAnimation { duration: 1500 }
+
+                                        PropertyAnimation {
+                                            target: emailText
+                                            property: "x"
+                                            to: -(emailText.width - marqueeContainer.width)
+                                            duration: Math.max(1500, (emailText.width - marqueeContainer.width) * 35)
+                                            easing.type: Easing.Linear
+                                        }
+
+                                        PauseAnimation { duration: 1500 }
+
+                                        PropertyAnimation {
+                                            target: emailText
+                                            property: "x"
+                                            to: 0
+                                            duration: Math.max(1500, (emailText.width - marqueeContainer.width) * 35)
+                                            easing.type: Easing.Linear
+                                        }
+                                    }
+
+                                    onNeedsScrollChanged: {
+                                        if (!needsScroll) {
+                                            x = 0;
+                                        }
+                                    }
                                 }
                             }
-                        }
-
-                        Text {
-                            text: modelData.email
-                            color: Theme.textSecondary
-                            font.pixelSize: 12
-                            elide: Text.ElideRight
-                            Layout.fillWidth: true
                         }
                     }
 
@@ -463,6 +456,183 @@ ColumnLayout {
                     selectedContactName = modelData.name
                     selectedContactEmail = modelData.email
                     contactDetailsPopup.open()
+                }
+            }
+        }
+
+        // ===== CONTACTS TAB =====
+        ColumnLayout {
+            anchors.fill: parent
+            visible: optionsSection.selectedIndex === 2
+            spacing: 12
+
+            // Search Bar
+            TextField {
+                id: contactsSearchInput
+                placeholderText: "Search contacts..."
+                placeholderTextColor: Theme.textSecondary
+                color: Theme.textPrimary
+                font.pixelSize: 14
+                inputMethodHints: Qt.ImhNoPredictiveText
+                Layout.fillWidth: true
+                Layout.leftMargin: 2
+                Layout.rightMargin: 2
+
+                background: Rectangle {
+                    implicitHeight: 44
+                    color: Theme.inputBackground
+                    radius: 12
+                    border.color: contactsSearchInput.activeFocus ? Theme.inputFocusBorder : Theme.inputBorder
+                    border.width: 1
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 200 }
+                    }
+                }
+
+                onTextChanged: contactsView.filterContacts()
+                onDisplayTextChanged: contactsView.filterContacts()
+            }
+
+            ListView {
+                id: contactsView
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+
+                property var filteredModel: myBackend.contacts
+
+                function filterContacts() {
+                    var list = myBackend.contacts;
+                    var query = contactsSearchInput.displayText.toLowerCase().trim();
+                    if (query === "") {
+                        filteredModel = list;
+                    } else {
+                        var result = [];
+                        for (var i = 0; i < list.length; i++) {
+                            var item = list[i];
+                            if ((item.name && item.name.toLowerCase().indexOf(query) !== -1) ||
+                                (item.email && item.email.toLowerCase().indexOf(query) !== -1)) {
+                                result.push(item);
+                            }
+                        }
+                        filteredModel = result;
+                    }
+                }
+
+                model: filteredModel
+                clip: true
+                spacing: 6
+
+                Connections {
+                    target: myBackend
+                    function onContactsChanged() {
+                        contactsView.filterContacts();
+                    }
+                }
+
+                delegate: ItemDelegate {
+                    width: contactsView.width
+                    height: 72
+
+                    background: Rectangle {
+                        color: parent.pressed ? Theme.cardHover : Theme.card
+                        radius: 12
+                        border.color: Theme.border
+                        border.width: 1
+                    }
+
+                    contentItem: RowLayout {
+                        spacing: 14
+                        anchors.leftMargin: 12
+                        anchors.rightMargin: 12
+
+                        Rectangle {
+                            width: 44; height: 44; radius: 22
+                            color: Theme.surfaceVariant
+                            Image {
+                                source: "../icons/user.png"
+                                anchors.centerIn: parent
+                                sourceSize: Qt.size(44, 44)
+                                width: 44; height: 44
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                            }
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 3
+
+                            RowLayout {
+                                spacing: 8
+                                Text {
+                                    text: modelData.name
+                                    color: Theme.textPrimary
+                                    font.weight: Font.DemiBold
+                                    font.pixelSize: 15
+                                }
+                                
+                                Rectangle {
+                                    visible: myBackend.blockedUsers.indexOf(modelData.email) !== -1
+                                    implicitWidth: 50
+                                    implicitHeight: 18
+                                    color: Theme.dangerSoft
+                                    border.color: Theme.danger
+                                    border.width: 1
+                                    radius: 4
+                                    
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: "Blocked"
+                                        color: Theme.danger
+                                        font.pixelSize: 9
+                                        font.weight: Font.DemiBold
+                                    }
+                                }
+                            }
+
+                            Text {
+                                text: modelData.email
+                                color: Theme.textSecondary
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                                Layout.fillWidth: true
+                            }
+                        }
+
+                        // Call action icon
+                        Rectangle {
+                            width: 32; height: 32; radius: 16
+                            color: Theme.accentSoft
+
+                            ThemedIcon {
+                                source: "../icons/dial.png"
+                                iconColor: Theme.accent
+                                sourceSize: Qt.size(16, 16)
+                                width: 16; height: 16
+                                anchors.centerIn: parent
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    myBackend.startCall(modelData.email)
+                                }
+                                onPressed: parent.scale = 0.9
+                                onReleased: parent.scale = 1.0
+                            }
+
+                            Behavior on scale {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                            }
+                        }
+                    }
+
+                    onClicked: {
+                        selectedContactName = modelData.name
+                        selectedContactEmail = modelData.email
+                        contactDetailsPopup.open()
+                    }
                 }
             }
         }
@@ -508,6 +678,11 @@ ColumnLayout {
         modal: true
         focus: true
         closePolicy: Popup.CloseOnPressOutside
+
+        onClosed: {
+            mainPage.forceActiveFocus()
+            Qt.inputMethod.hide()
+        }
 
         background: Rectangle {
             color: Theme.popupBackground
@@ -626,6 +801,11 @@ ColumnLayout {
         modal: true
         focus: true
         closePolicy: Popup.NoAutoClose
+
+        onAboutToShow: {
+            mainPage.forceActiveFocus()
+            Qt.inputMethod.hide()
+        }
 
         enter: Transition {
             NumberAnimation { property: "y"; from: parent.height; to: 0; duration: 300; easing.type: Easing.OutCubic }
@@ -830,6 +1010,50 @@ ColumnLayout {
                         Layout.alignment: Qt.AlignHCenter
                     }
                 }
+
+                // Delete Action Button
+                ColumnLayout {
+                    spacing: 6
+                    Layout.alignment: Qt.AlignHCenter
+
+                    Rectangle {
+                        id: detailsDeleteBtn
+                        width: 54
+                        height: 54
+                        radius: 27
+                        color: Theme.danger
+
+                        ThemedIcon {
+                            source: "../icons/trash.png"
+                            iconColor: "#FFFFFF"
+                            width: 22
+                            height: 22
+                            sourceSize: Qt.size(22, 22)
+                            anchors.centerIn: parent
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            onClicked: {
+                                deleteConfirmPopup.open()
+                            }
+                            onPressed: parent.scale = 0.9
+                            onReleased: parent.scale = 1.0
+                        }
+
+                        Behavior on scale {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Text {
+                        text: "Delete"
+                        color: Theme.danger
+                        font.pixelSize: 11
+                        font.weight: Font.Medium
+                        Layout.alignment: Qt.AlignHCenter
+                    }
+                }
             }
 
             // --- DETAILS CARD SECTION ---
@@ -863,6 +1087,106 @@ ColumnLayout {
             }
 
             Item { Layout.fillHeight: true } // spacer
+        }
+    }
+
+    // --- CONFIRMATION POPUP FOR CONTACT DELETION ---
+    Popup {
+        id: deleteConfirmPopup
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        width: parent.width * 0.85
+        modal: true
+        focus: true
+        closePolicy: Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: Theme.popupBackground
+            radius: 20
+            border.color: Theme.popupBorder
+            border.width: 1
+        }
+
+        contentItem: ColumnLayout {
+            spacing: 20
+            anchors.fill: parent
+            anchors.margins: 18
+
+            Text {
+                text: "Delete Contact?"
+                color: Theme.textPrimary
+                font.weight: Font.DemiBold
+                font.pixelSize: 18
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            Text {
+                text: "Are you sure you want to delete contact of " + selectedContactName + "?"
+                color: Theme.textSecondary
+                font.pixelSize: 14
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignHCenter
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+                Layout.topMargin: 8
+
+                // Cancel button
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: cancelConfirmArea.pressed ? Theme.cardHover : Theme.buttonSecondary
+
+                    Text {
+                        text: "Cancel"
+                        color: Theme.buttonSecondaryText
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: cancelConfirmArea
+                        anchors.fill: parent
+                        onClicked: deleteConfirmPopup.close()
+                    }
+                }
+
+                // Delete button
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 44
+                    radius: 10
+                    color: deleteConfirmArea.pressed ? Qt.darker(Theme.danger, 1.2) : Theme.danger
+
+                    Text {
+                        text: "Delete"
+                        color: "#FFFFFF"
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        anchors.centerIn: parent
+                    }
+
+                    MouseArea {
+                        id: deleteConfirmArea
+                        anchors.fill: parent
+                        onClicked: {
+                            deleteConfirmPopup.close()
+                            contactDetailsPopup.close()
+                            
+                            // Perform immediate client-side delete
+                            myBackend.removeContact(selectedContactEmail)
+                            myUtils.showToast("Contact removed successfully")
+                        }
+                    }
+                }
+            }
         }
     }
 }

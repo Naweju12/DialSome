@@ -34,3 +34,14 @@ void Utils::createFile(const QString &fileName, const QString &content) {
         file.close();
     }
 }
+
+void Utils::moveToBackground() {
+#ifdef Q_OS_ANDROID
+    QJniObject activity = QNativeInterface::QAndroidApplication::context();
+    if (activity.isValid()) {
+        activity.callMethod<jboolean>("moveTaskToBack", "(Z)Z", true);
+    }
+#else
+    qDebug() << "moveToBackground: not supported on this platform";
+#endif
+}

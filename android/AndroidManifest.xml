@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.github.biltudas1.dialsome" android:installLocation="auto" android:versionCode="27" android:versionName="0.18.23-alpha">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.github.biltudas1.dialsome" android:installLocation="auto" android:versionCode="27" android:versionName="0.18.24-alpha">
     <!-- %%INSERT_PERMISSIONS -->
     <!-- %%INSERT_FEATURES -->
         <uses-sdk android:minSdkVersion="28" android:targetSdkVersion="36"/>
     <supports-screens android:anyDensity="true" android:largeScreens="true" android:normalScreens="true" android:smallScreens="true"/>
-    <application android:name="org.qtproject.qt.android.bindings.QtApplication" android:hardwareAccelerated="true" android:label="DialSome" android:icon="@drawable/icon" android:requestLegacyExternalStorage="true" android:allowBackup="true" android:fullBackupOnly="false">
+    <application android:name="org.qtproject.qt.android.bindings.QtApplication" android:hardwareAccelerated="true" android:label="DialSome" android:icon="@drawable/icon" android:requestLegacyExternalStorage="true" android:allowBackup="true" android:fullBackupOnly="false" android:enableOnBackInvokedCallback="true">
         <activity android:name=".MainActivity"
                 android:configChanges="orientation|uiMode|screenLayout|screenSize|smallestScreenSize|layoutDirection|locale|fontScale|keyboard|keyboardHidden|navigation|mcc|mnc|density"
                 android:label="-- %%INSERT_APP_NAME%% --"

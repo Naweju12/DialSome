@@ -8,6 +8,7 @@ public class CallStateManager {
     // Tracks if the user has accepted the ongoing call
     public static boolean isCallActive = false;
     public static boolean isIncomingCallRinging = false;
+    public static boolean isAppRunning = false;
 
     // Blocked users set — populated from C++ via JNI on startup and on change
     public static final Set<String> blockedUsers =

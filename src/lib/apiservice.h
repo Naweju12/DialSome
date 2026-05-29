@@ -27,6 +27,7 @@ public:
     void end_call(QString email, QString accessToken);
     void fetch_contacts(QString accessToken);
     void add_contact(QString email, QString accessToken);
+    void remove_contact(QString email, QString accessToken);
 
 signals:
     void tokenRefreshed(QString accessToken, QString refreshToken);

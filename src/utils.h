@@ -18,6 +18,7 @@ public:
     explicit Utils(QObject *parent = nullptr);
     Q_INVOKABLE void showToast(const QString &message);
     Q_INVOKABLE void createFile(const QString &fileName, const QString &content);
+    Q_INVOKABLE void moveToBackground();
 };
 
 #endif // UTILS_H

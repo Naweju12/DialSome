@@ -4,5 +4,9 @@
         <file>icons/user.png</file>
         <file>icons/dial.png</file>
         <file>icons/block.png</file>
+        <file>icons/trash.png</file>
+        <file>icons/call_received.png</file>
+        <file>icons/call_send.png</file>
+        <file>icons/missed_call.png</file>
     </qresource>
 </RCC>

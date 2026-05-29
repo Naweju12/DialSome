@@ -71,9 +71,10 @@ public:
     void setUseHttps(bool value);
     void setUseWss(bool value);
     QVariantList recentCalls() const;
-    void saveToHistory(const QString &email, const QString &name, bool isIncoming);
+    void saveToHistory(const QString &email, const QString &name, bool isIncoming, bool isMissed = false);
     QVariantList contacts() const;
     Q_INVOKABLE void addContact(const QString &email);
+    Q_INVOKABLE void removeContact(const QString &email);
     Q_INVOKABLE void acceptCall();
     bool speakerOn() const;
     Q_INVOKABLE void setSpeakerOn(bool on);
@@ -115,6 +116,7 @@ signals:
     void callConnectedChanged();
     void isCallerChanged();
     void blockedUsersChanged();
+    void backPressed();
 
 private slots:
     void onTextMessageReceived(const QString &message);
@@ -138,6 +140,7 @@ private:
     QString m_callerName = "User"; // Name of the other party
     QString m_incomingRoomId = "";
     QString m_currentRoomId = "";
+    QDateTime m_callStartTime;
     QVariantList m_recentCalls;
     QVariantList m_contacts;
     bool m_speakerOn = false;

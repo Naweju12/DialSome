@@ -301,6 +301,16 @@ JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_showIncom
         FCMManager::instance()->processIncomingSignal(rId, mail, n);
     }, Qt::QueuedConnection);
 }
+
+JNIEXPORT void JNICALL Java_com_github_biltudas1_dialsome_MainActivity_onSystemBackPressed(
+    JNIEnv* env, jobject) {
+
+    if (!s_instance) return;
+
+    QMetaObject::invokeMethod(s_instance, [=]() {
+        emit s_instance->backPressed();
+    }, Qt::QueuedConnection);
+}
 }
 
 void Backend::startCall(const QString &email) {
@@ -355,6 +365,28 @@ void Backend::startCall(const QString &email) {
 }
 
 void Backend::joinCall(const QString &roomId, const QString &email, const QString &roomName) {
+    // Join call history logic: check if this incoming call is already in history, update it or create it
+    bool found = false;
+    for (int i = 0; i < m_recentCalls.size(); ++i) {
+        QVariantMap call = m_recentCalls[i].toMap();
+        if (call["email"].toString().trimmed().compare(email.trimmed(), Qt::CaseInsensitive) == 0 &&
+            call["isIncoming"].toBool()) {
+            // Found the incoming call entry, mark as answered (not missed)
+            call["isMissed"] = false;
+            m_recentCalls[i] = call;
+            found = true;
+            break; // only update latest one
+        }
+    }
+    if (found) {
+        QJsonDocument doc = QJsonDocument::fromVariant(m_recentCalls);
+        m_storage->save("call_history", doc.toJson(QJsonDocument::Compact));
+        emit recentCallsChanged();
+    } else {
+        // If not found (e.g. cold start), save as answered incoming call now!
+        saveToHistory(email, roomName, true, false);
+    }
+
     if (this->m_webrtc.isValid()) {
         qDebug() << "Call already in progress, ignoring joinCall.";
         return;
@@ -565,7 +597,7 @@ void Backend::Startup() {
 
         qDebug() << "Incoming call screen triggered";
         this->setMessage("Incoming call from " + email);
-        this->saveToHistory(email, roomName, true);
+        this->saveToHistory(email, roomName, true, true);
         
         // Store data and trigger the UI
         this->m_incomingRoomId = roomId;
@@ -679,6 +711,32 @@ void Backend::endCall() {
     }
     #endif
 
+    int duration = 0;
+    if (m_callStartTime.isValid()) {
+        duration = m_callStartTime.secsTo(QDateTime::currentDateTime());
+        m_callStartTime = QDateTime(); // reset
+        qDebug() << "Call ended. Calculated duration:" << duration << "seconds";
+    }
+
+    if (duration > 0) {
+        // Find the latest history entry and update its duration!
+        bool historyChanged = false;
+        for (int i = 0; i < m_recentCalls.size(); ++i) {
+            QVariantMap call = m_recentCalls[i].toMap();
+            if (!call["duration"].isValid() || call["duration"].toInt() == 0) {
+                call["duration"] = duration;
+                m_recentCalls[i] = call;
+                historyChanged = true;
+                break;
+            }
+        }
+        if (historyChanged) {
+            QJsonDocument doc = QJsonDocument::fromVariant(m_recentCalls);
+            m_storage->save("call_history", doc.toJson(QJsonDocument::Compact));
+            emit recentCallsChanged();
+        }
+    }
+
     this->m_activePeers.clear();
     this->m_heldPeers.clear();
     this->m_dialingPeers.clear();
@@ -780,6 +838,10 @@ void Backend::addActivePeer(const QString &email) {
         m_dialingPeers.removeAll(email);
     }
     if (!m_activePeers.contains(email)) {
+        if (m_activePeers.isEmpty()) {
+            m_callStartTime = QDateTime::currentDateTime();
+            qDebug() << "First active peer joined! Starting call timer.";
+        }
         m_activePeers.append(email);
         emit callerInfoChanged();
         emit callConnectedChanged();
@@ -853,11 +915,12 @@ void Backend::setUseWss(bool value) {
     }
 }
 
-void Backend::saveToHistory(const QString &email, const QString &name, bool isIncoming) {
+void Backend::saveToHistory(const QString &email, const QString &name, bool isIncoming, bool isMissed) {
     QVariantMap log;
     log["email"] = email;
     log["name"] = name;
     log["isIncoming"] = isIncoming;
+    log["isMissed"] = isMissed;
     log["timestamp"] = QDateTime::currentDateTime().toString(Qt::ISODate);
 
     // Add to the beginning of the list
@@ -884,15 +947,114 @@ QVariantList Backend::contacts() const {
 void Backend::addContact(const QString &email) {
     if (email.isEmpty()) return;
 
-    qDebug() << "Requesting to add contact:" << email;
+    QString targetEmail = email.trimmed().toLower();
+    qDebug() << "Adding contact immediately on client:" << targetEmail;
 
-    this->m_api->add_contact(email, this->m_jwtAccessToken);
+    // Check if duplicate
+    bool alreadyExists = false;
+    for (const QVariant &c : m_contacts) {
+        QVariantMap map = c.toMap();
+        if (map["email"].toString().trimmed().toLower() == targetEmail) {
+            alreadyExists = true;
+            break;
+        }
+    }
+
+    if (!alreadyExists) {
+        // 1. Find a temporary name
+        QString targetName = "";
+        for (const QVariant &call : m_recentCalls) {
+            QVariantMap map = call.toMap();
+            if (map["email"].toString().trimmed().compare(targetEmail, Qt::CaseInsensitive) == 0) {
+                QString n = map["name"].toString().trimmed();
+                if (!n.isEmpty() && n != targetEmail) {
+                    targetName = n;
+                    break;
+                }
+            }
+        }
+
+        if (targetName.isEmpty()) {
+            if (targetEmail.contains("@")) {
+                targetName = targetEmail.split("@").first();
+            } else {
+                targetName = targetEmail;
+            }
+            if (!targetName.isEmpty()) {
+                targetName[0] = targetName[0].toUpper();
+            }
+        }
+
+        // 2. Add to local list immediately
+        QVariantMap newContact;
+        newContact["name"] = targetName;
+        newContact["email"] = targetEmail;
+        m_contacts.append(newContact);
+
+        // 3. Save to local storage
+        QJsonDocument doc = QJsonDocument::fromVariant(m_contacts);
+        m_storage->save("contacts", doc.toJson(QJsonDocument::Compact));
+
+        // 4. Emit change signal so UI updates instantly
+        emit this->contactsChanged();
+    }
+
+    // 5. Trigger background API request to server
+    this->m_api->add_contact(targetEmail, this->m_jwtAccessToken);
+}
+
+void Backend::removeContact(const QString &email) {
+    if (email.isEmpty()) return;
+
+    QString targetEmail = email.trimmed().toLower();
+    qDebug() << "Removing contact immediately on client:" << targetEmail;
+
+    // 1. Update local list immediately
+    bool changed = false;
+    for (int i = m_contacts.size() - 1; i >= 0; --i) {
+        QVariantMap contact = m_contacts[i].toMap();
+        if (contact["email"].toString().trimmed().toLower() == targetEmail) {
+            m_contacts.removeAt(i);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        // 2. Save new list locally
+        QJsonDocument doc = QJsonDocument::fromVariant(m_contacts);
+        m_storage->save("contacts", doc.toJson(QJsonDocument::Compact));
+        
+        // 3. Emit change signal
+        emit this->contactsChanged();
+    }
+
+    // 4. Trigger server sync in background
+    this->m_api->remove_contact(targetEmail, this->m_jwtAccessToken);
 }
 
 void Backend::acceptCall() {
     if (!m_incomingRoomId.isEmpty()) {
         // Join the WebRTC room now that the user has accepted
         joinCall(m_incomingRoomId, m_callerEmail, m_callerName);
+
+        // Update history: mark the most recent incoming call as answered (not missed)
+        bool historyChanged = false;
+        for (int i = 0; i < m_recentCalls.size(); ++i) {
+            QVariantMap call = m_recentCalls[i].toMap();
+            if (call["email"].toString().trimmed().compare(m_callerEmail.trimmed(), Qt::CaseInsensitive) == 0 &&
+                call["isIncoming"].toBool()) {
+                call["isMissed"] = false;
+                m_recentCalls[i] = call;
+                historyChanged = true;
+                break; // only update the latest one!
+            }
+        }
+        if (historyChanged) {
+            QJsonDocument doc = QJsonDocument::fromVariant(m_recentCalls);
+            m_storage->save("call_history", doc.toJson(QJsonDocument::Compact));
+            emit recentCallsChanged();
+        }
+
         m_incomingRoomId.clear();
 
         // Clear the Android notification to stop the ringtone

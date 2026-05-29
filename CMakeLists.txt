@@ -69,6 +69,10 @@ qt_add_qml_module(DialSome
         icons/volume_off.png
         icons/mic_on.png
         icons/mic_off.png
+        icons/trash.png
+        icons/call_received.png
+        icons/call_send.png
+        icons/missed_call.png
         sounds/ringback.wav
 )
 

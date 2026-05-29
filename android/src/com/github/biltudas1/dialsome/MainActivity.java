@@ -6,6 +6,8 @@ import android.os.Build;
 import android.view.WindowManager;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 import org.qtproject.qt.android.bindings.QtActivity;
 
 public class MainActivity extends QtActivity {
@@ -19,6 +21,7 @@ public class MainActivity extends QtActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        CallStateManager.isAppRunning = true;
         instance = this; // Save instance reference
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -29,6 +32,20 @@ public class MainActivity extends QtActivity {
         } else {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
                                  WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
+        }
+
+        // Register the predictive back gesture callback (Android 13+ / API 33+)
+        // On Android 16 (API 36), this is mandatory for back button interception
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                new OnBackInvokedCallback() {
+                    @Override
+                    public void onBackInvoked() {
+                        onSystemBackPressed();
+                    }
+                }
+            );
         }
 
         // Cache the intent instead of executing it immediately
@@ -91,4 +108,5 @@ public class MainActivity extends QtActivity {
 
     private native void acceptCallNative(String roomId, String email, String name);
     private native void showIncomingCallNative(String roomId, String email, String name);
+    private native void onSystemBackPressed();
 }
