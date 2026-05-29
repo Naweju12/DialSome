@@ -13,6 +13,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     Network
     WebSockets
     Multimedia
+    Core5Compat
 )
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -46,6 +47,7 @@ qt_add_qml_module(DialSome
         ui/CallingPage.qml
         ui/SettingsPage.qml
         ui/SelectContactPage.qml
+        ui/ThemedIcon.qml
     SOURCES
         src/lib/securestorage.h src/lib/securestorage.cpp
         src/lib/google.h src/lib/google.cpp
@@ -81,6 +83,7 @@ target_link_libraries(DialSome PRIVATE
     Qt6::Network
     Qt6::WebSockets
     Qt6::Multimedia
+    Qt6::Core5Compat
 )
 
 target_include_directories(DialSome PRIVATE src src/lib)

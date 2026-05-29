@@ -103,14 +103,12 @@ Rectangle {
                         radius: 64
                         color: Theme.surfaceVariant
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/user.png"
-                            sourceSize.width: 128
-                            sourceSize.height: 128
+                            iconColor: Theme.textSecondary
+                            sourceSize: Qt.size(128, 128)
+                            width: 128; height: 128
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                            mipmap: true
                         }
                     }
 
@@ -346,13 +344,13 @@ Rectangle {
                             color: disconnectArea.pressed ? Qt.darker(Theme.danger, 1.2) : Theme.danger
                             Layout.alignment: Qt.AlignVCenter
 
-                            Image {
+                            ThemedIcon {
                                 source: "../icons/dial.png"
-                                sourceSize.width: 18
-                                sourceSize.height: 18
+                                iconColor: "#FFFFFF"
+                                sourceSize: Qt.size(18, 18)
+                                width: 18; height: 18
                                 anchors.centerIn: parent
-                                rotation: 135 // red decline phone icon angle
-                                fillMode: Image.PreserveAspectFit
+                                rotation: 135
                             }
 
                             MouseArea {
@@ -392,14 +390,12 @@ Rectangle {
                 radius: 18
                 Layout.alignment: Qt.AlignHCenter
 
-                Image {
+                ThemedIcon {
                     source: myBackend.speakerOn ? "../icons/volume_on.png" : "../icons/volume_off.png"
-                    sourceSize.width: 26
-                    sourceSize.height: 26
+                    iconColor: myBackend.speakerOn ? "#FFFFFF" : Theme.textSecondary
+                    sourceSize: Qt.size(26, 26)
+                    width: 26; height: 26
                     anchors.centerIn: parent
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 MouseArea {
@@ -438,14 +434,12 @@ Rectangle {
                 radius: 18
                 Layout.alignment: Qt.AlignHCenter
 
-                Image {
+                ThemedIcon {
                     source: myBackend.micMuted ? "../icons/mic_off.png" : "../icons/mic_on.png"
-                    sourceSize.width: 26
-                    sourceSize.height: 26
+                    iconColor: myBackend.micMuted ? "#FFFFFF" : Theme.textSecondary
+                    sourceSize: Qt.size(26, 26)
+                    width: 26; height: 26
                     anchors.centerIn: parent
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 MouseArea {
@@ -485,14 +479,12 @@ Rectangle {
                 radius: 18
                 Layout.alignment: Qt.AlignHCenter
 
-                Image {
+                ThemedIcon {
                     source: "../icons/add.png"
-                    sourceSize.width: 26
-                    sourceSize.height: 26
+                    iconColor: Theme.textSecondary
+                    sourceSize: Qt.size(26, 26)
+                    width: 26; height: 26
                     anchors.centerIn: parent
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 MouseArea {
@@ -528,15 +520,13 @@ Rectangle {
                 radius: 18
                 Layout.alignment: Qt.AlignHCenter
 
-                Image {
+                ThemedIcon {
                     source: "../icons/dial.png"
-                    sourceSize.width: 28
-                    sourceSize.height: 28
+                    iconColor: "#FFFFFF"
+                    sourceSize: Qt.size(28, 28)
+                    width: 28; height: 28
                     anchors.centerIn: parent
                     rotation: 135
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 MouseArea {

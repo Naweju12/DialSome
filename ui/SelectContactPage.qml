@@ -115,12 +115,12 @@ Rectangle {
                         radius: 22
                         color: Theme.surfaceVariant
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/user.png"
+                            iconColor: Theme.textSecondary
                             anchors.centerIn: parent
                             sourceSize: Qt.size(44, 44)
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
+                            width: 44; height: 44
                         }
                     }
 
@@ -151,11 +151,12 @@ Rectangle {
                         radius: 18
                         color: Theme.success
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/dial.png"
+                            iconColor: "#FFFFFF"
                             sourceSize: Qt.size(16, 16)
+                            width: 16; height: 16
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
                         }
 
                         scale: dialIconArea.pressed ? 0.85 : 1.0

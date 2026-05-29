@@ -135,8 +135,11 @@ Rectangle {
 
                         Switch {
                             id: themeSwitch
-                            checked: Theme.isDark
                             onToggled: Theme.toggleTheme()
+
+                            Binding on checked {
+                                value: Theme.isDark
+                            }
                         }
                     }
                 }
@@ -176,13 +179,12 @@ Rectangle {
                             radius: 12
                             color: Theme.accentSoft
 
-                            Image {
+                            ThemedIcon {
                                 source: "../icons/server.png"
-                                Layout.preferredWidth: 22
-                                Layout.preferredHeight: 22
+                                iconColor: Theme.accent
                                 sourceSize: Qt.size(22, 22)
+                                width: 22; height: 22
                                 anchors.centerIn: parent
-                                fillMode: Image.PreserveAspectFit
                             }
                         }
 

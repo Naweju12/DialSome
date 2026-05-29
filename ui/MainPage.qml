@@ -62,11 +62,12 @@ ColumnLayout {
                 Layout.preferredWidth: 36
                 Layout.preferredHeight: 36
 
-                Image {
+                ThemedIcon {
                     id: addContactBtn
                     source: "../icons/add.png"
-                    sourceSize.width: 20
-                    sourceSize.height: 20
+                    iconColor: Theme.textSecondary
+                    sourceSize: Qt.size(20, 20)
+                    width: 20; height: 20
                     anchors.centerIn: parent
                 }
 
@@ -91,11 +92,12 @@ ColumnLayout {
                 Layout.preferredWidth: 36
                 Layout.preferredHeight: 36
 
-                Image {
+                ThemedIcon {
                     id: settingsBtn
                     source: "../icons/settings.png"
-                    sourceSize.width: 18
-                    sourceSize.height: 18
+                    iconColor: Theme.textSecondary
+                    sourceSize: Qt.size(18, 18)
+                    width: 18; height: 18
                     anchors.centerIn: parent
                 }
 
@@ -284,12 +286,12 @@ ColumnLayout {
                     Rectangle {
                         width: 44; height: 44; radius: 22
                         color: Theme.surfaceVariant
-                        Image {
+                        ThemedIcon {
                             source: "../icons/user.png"
+                            iconColor: Theme.textSecondary
                             anchors.centerIn: parent
                             sourceSize: Qt.size(44, 44)
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
+                            width: 44; height: 44
                         }
                     }
 
@@ -315,11 +317,12 @@ ColumnLayout {
                     Rectangle {
                         width: 32; height: 32; radius: 16
                         color: Theme.accentSoft
-                        Image {
+                        ThemedIcon {
                             source: "../icons/dial.png"
+                            iconColor: Theme.accent
                             sourceSize: Qt.size(16, 16)
+                            width: 16; height: 16
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
                         }
                     }
                 }
@@ -358,12 +361,12 @@ ColumnLayout {
                     Rectangle {
                         width: 44; height: 44; radius: 22
                         color: Theme.surfaceVariant
-                        Image {
+                        ThemedIcon {
                             source: "../icons/user.png"
+                            iconColor: Theme.textSecondary
                             anchors.centerIn: parent
                             sourceSize: Qt.size(44, 44)
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
+                            width: 44; height: 44
                         }
                     }
 
@@ -413,11 +416,12 @@ ColumnLayout {
                         width: 32; height: 32; radius: 16
                         color: Theme.accentSoft
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/dial.png"
+                            iconColor: Theme.accent
                             sourceSize: Qt.size(16, 16)
+                            width: 16; height: 16
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
                         }
 
                         MouseArea {
@@ -712,15 +716,13 @@ ColumnLayout {
                         radius: 27
                         color: Theme.accent
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/dial.png"
+                            iconColor: "#FFFFFF"
                             width: 22
                             height: 22
                             sourceSize: Qt.size(22, 22)
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                            mipmap: true
                         }
 
                         MouseArea {
@@ -765,15 +767,13 @@ ColumnLayout {
                         radius: 27
                         color: blockButtonContainer.isBlocked ? Theme.success : Theme.danger
 
-                        Image {
+                        ThemedIcon {
                             source: "../icons/block.png"
+                            iconColor: "#FFFFFF"
                             width: 22
                             height: 22
                             sourceSize: Qt.size(22, 22)
                             anchors.centerIn: parent
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                            mipmap: true
                         }
 
                         MouseArea {

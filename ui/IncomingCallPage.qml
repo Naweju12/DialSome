@@ -84,14 +84,12 @@ ColumnLayout {
                     border.color: Theme.border
                     border.width: 1
 
-                    Image {
+                    ThemedIcon {
                         source: "../icons/user.png"
-                        sourceSize.width: 100
-                        sourceSize.height: 100
+                        iconColor: Theme.textSecondary
+                        sourceSize: Qt.size(100, 100)
+                        width: 100; height: 100
                         anchors.centerIn: parent
-                        fillMode: Image.PreserveAspectFit
-                        smooth: true
-                        mipmap: true
                     }
                 }
             }
@@ -161,14 +159,12 @@ ColumnLayout {
                 radius: 32
                 color: Theme.success
 
-                Image {
+                ThemedIcon {
                     source: "../icons/dial.png"
-                    sourceSize.width: 32
-                    sourceSize.height: 32
+                    iconColor: "#FFFFFF"
+                    sourceSize: Qt.size(32, 32)
+                    width: 32; height: 32
                     anchors.centerIn: parent
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 Behavior on x {
@@ -210,15 +206,13 @@ ColumnLayout {
                 radius: 30
                 Layout.alignment: Qt.AlignHCenter
 
-                Image {
+                ThemedIcon {
                     source: "../icons/dial.png"
-                    sourceSize.width: 32
-                    sourceSize.height: 32
+                    iconColor: "#FFFFFF"
+                    sourceSize: Qt.size(32, 32)
+                    width: 32; height: 32
                     anchors.centerIn: parent
                     rotation: 135
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
-                    mipmap: true
                 }
 
                 MouseArea {
