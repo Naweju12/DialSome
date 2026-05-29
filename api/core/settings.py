@@ -27,7 +27,9 @@ POSTGREDSQL_URI = str(ENV.get("POSTGRESQL_URI"))
 # EdDSA Key
 if not ENV.exist("EDDSA_PRIVATE_KEY"):
   raise EnvironmentError("EDDSA_PRIVATE_KEY can't be empty")
-EDDSA_KEY = eddsa.EdDSA(str(ENV.get("EDDSA_PRIVATE_KEY")))
+EDDSA_KEY = eddsa.EdDSA(
+  base64.b64decode(str(ENV.get("EDDSA_PRIVATE_KEY"))).decode()
+)
 
 # Firebase Service Account
 if not ENV.exist("FIREBASE_SERVICE_ACCOUNT"):
