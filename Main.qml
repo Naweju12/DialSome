@@ -19,7 +19,7 @@ ApplicationWindow {
         ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
     }
 
-    onClosing: (close) => {
+    onClosing: {
         if (mainStack.currentItem && typeof mainStack.currentItem.handleBack === "function") {
             if (mainStack.currentItem.handleBack()) {
                 close.accepted = false

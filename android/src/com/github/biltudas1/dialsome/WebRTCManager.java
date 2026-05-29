@@ -57,6 +57,22 @@ public class WebRTCManager {
         adm.release();
     }
 
+    public void updateForegroundNotification(final String title, final String text) {
+        synchronized (this) {
+            if (mContext != null) {
+                Intent serviceIntent = new Intent(mContext, CallForegroundService.class);
+                serviceIntent.putExtra("title", title);
+                serviceIntent.putExtra("text", text);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mContext.startForegroundService(serviceIntent);
+                } else {
+                    mContext.startService(serviceIntent);
+                }
+                isForegroundServiceStarted = true;
+            }
+        }
+    }
+
     @SuppressWarnings("deprecation")
     private void setupAudioManager(boolean enable) {
         if (audioManager == null) return;

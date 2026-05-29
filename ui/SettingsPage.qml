@@ -352,7 +352,7 @@ Rectangle {
         width: parent.width * 0.9
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        closePolicy: Popup.CloseOnPressOutside
 
         background: Rectangle {
             color: Theme.popupBackground
@@ -381,6 +381,7 @@ Rectangle {
                 Layout.fillWidth: true
                 color: Theme.textPrimary
                 font.pixelSize: 14
+                inputMethodHints: Qt.ImhUrlCharactersOnly | Qt.ImhNoPredictiveText
 
                 validator: RegularExpressionValidator {
                     regularExpression: /[a-zA-Z0-9\.\-:]+/
@@ -483,6 +484,7 @@ Rectangle {
                         anchors.fill: parent
                         enabled: parent.saveBtnEnabled
                         onClicked: {
+                            Qt.inputMethod.commit()
                             myBackend.serverUrl = serverInput.text
                             myBackend.useHttps = httpsSwitch.checked
                             myBackend.useWss = wssSwitch.checked

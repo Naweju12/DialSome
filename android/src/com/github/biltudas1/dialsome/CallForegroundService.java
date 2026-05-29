@@ -3,7 +3,9 @@ package com.github.biltudas1.dialsome;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
@@ -23,11 +25,36 @@ public class CallForegroundService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        String title = "DialSome";
+        String text = "Call in progress...";
+
+        if (intent != null) {
+            String customTitle = intent.getStringExtra("title");
+            String customText = intent.getStringExtra("text");
+            if (customTitle != null && !customTitle.isEmpty()) {
+                title = customTitle;
+            }
+            if (customText != null && !customText.isEmpty()) {
+                text = customText;
+            }
+        }
+
+        // PendingIntent to launch MainActivity (bring existing instance to foreground)
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                notificationIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("DialSome")
-                .setContentText("Call in progress...")
-                .setSmallIcon(R.drawable.icon) // Ensure you have this icon
+                .setContentTitle(title)
+                .setContentText(text)
+                .setSmallIcon(R.drawable.icon) // Standard app icon
                 .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setContentIntent(pendingIntent)
                 .setOngoing(true)
                 .build();
 

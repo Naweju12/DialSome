@@ -33,6 +33,12 @@ Backend::Backend(QObject *parent) : QObject(parent) {
     }
     syncBlockedUsersToJava();
 
+    QString contactsJson = m_storage->get("contacts");
+    if (!contactsJson.isEmpty()) {
+        QJsonDocument doc = QJsonDocument::fromJson(contactsJson.toUtf8());
+        m_contacts = doc.toVariant().toList();
+    }
+
 
     connect(this, &Backend::settingsLoaded, this, [this]() {
         QString hostUrl = this->m_settings->getHttpProtocol() + "://" + this->m_settings->getHost();
@@ -337,6 +343,7 @@ void Backend::startCall(const QString &email) {
 
                 if (m_webrtc.isValid()) {
                     m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+                    this->updateAndroidNotification();
                 }
             }, Qt::SingleShotConnection);
 
@@ -381,6 +388,7 @@ void Backend::joinCall(const QString &roomId, const QString &email, const QStrin
                 this->m_callerName = roomName;
                 emit this->callerInfoChanged();
                 m_webrtc.callMethod<void>("init", "(Landroid/content/Context;)V", context.object());
+                this->updateAndroidNotification();
             }
         });
     #endif
@@ -521,6 +529,8 @@ void Backend::Startup() {
     // Updates the UI of Contacts
     connect(m_api, &APIService::contactsFetched, this, [this](QVariantList contacts) {
         m_contacts = contacts;
+        QJsonDocument doc = QJsonDocument::fromVariant(contacts);
+        m_storage->save("contacts", doc.toJson(QJsonDocument::Compact));
         emit this->contactsChanged();
     });
 
@@ -781,6 +791,7 @@ void Backend::addActivePeer(const QString &email) {
         qDebug() << "Auto-merging new participant connection:" << email;
         mergeCalls();
     }
+    this->updateAndroidNotification();
 }
 
 void Backend::removeActivePeer(const QString &email) {
@@ -807,6 +818,7 @@ void Backend::removeActivePeer(const QString &email) {
         endCall();
     } else {
         setMessage("Peer disconnected. Active peers: " + m_activePeers.join(", "));
+        this->updateAndroidNotification();
     }
 }
 
@@ -1131,6 +1143,37 @@ void Backend::unblockUser(const QString &email) {
         emit blockedUsersChanged();
         qDebug() << "User unblocked successfully:" << trimmed;
     }
+}
+
+void Backend::updateAndroidNotification() {
+#ifdef Q_OS_ANDROID
+    if (!this->m_webrtc.isValid()) return;
+
+    QString title = "DialSome";
+    QString text = "Call in progress...";
+
+    if (!m_activePeers.isEmpty()) {
+        if (m_activePeers.size() > 1) {
+            title = "Conference Call";
+            text = "Ongoing Call";
+        } else {
+            title = callerNameForEmail(m_activePeers.first());
+            text = "Ongoing Call";
+        }
+    } else if (!m_callerEmail.isEmpty()) {
+        title = m_callerName;
+        if (m_isCaller) {
+            text = "Calling...";
+        } else {
+            text = "Connecting...";
+        }
+    }
+
+    m_webrtc.callMethod<void>("updateForegroundNotification", 
+                              "(Ljava/lang/String;Ljava/lang/String;)V",
+                              QJniObject::fromString(title).object(),
+                              QJniObject::fromString(text).object());
+#endif
 }
 
 

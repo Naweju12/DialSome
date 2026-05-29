@@ -215,6 +215,7 @@ ColumnLayout {
                 placeholderTextColor: Theme.textSecondary
                 color: Theme.textPrimary
                 font.pixelSize: 14
+                inputMethodHints: Qt.ImhEmailAddress | Qt.ImhNoPredictiveText
                 background: Rectangle {
                     implicitHeight: 48
                     color: Theme.inputBackground
@@ -250,6 +251,7 @@ ColumnLayout {
                     id: startCallArea
                     anchors.fill: parent
                     onClicked: {
+                        Qt.inputMethod.commit()
                         if (roomInput.text.trim().length > 0) {
                             myBackend.startCall(roomInput.text.trim())
                         }
@@ -476,6 +478,7 @@ ColumnLayout {
             standardButtons: Dialog.Ok | Dialog.Cancel
             anchors.centerIn: Overlay.overlay
             modal: true
+            closePolicy: Popup.NoAutoClose
 
             Label {
                 text: "To receive incoming calls while your phone is locked, DialSome needs Full-Screen Alert permissions."
@@ -504,7 +507,7 @@ ColumnLayout {
         width: parent.width * 0.9
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        closePolicy: Popup.CloseOnPressOutside
 
         background: Rectangle {
             color: Theme.popupBackground
@@ -532,6 +535,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 color: Theme.textPrimary
                 font.pixelSize: 14
+                inputMethodHints: Qt.ImhEmailAddress | Qt.ImhNoPredictiveText
 
                 background: Rectangle {
                     implicitHeight: 48
@@ -596,6 +600,7 @@ ColumnLayout {
                         anchors.fill: parent
                         enabled: parent.addBtnEnabled
                         onClicked: {
+                            Qt.inputMethod.commit()
                             myBackend.addContact(contactEmailInput.text.trim())
                             contactEmailInput.text = ""
                             addContactPopup.close();
@@ -620,7 +625,7 @@ ColumnLayout {
         height: parent.height
         modal: true
         focus: true
-        closePolicy: Popup.CloseOnEscape
+        closePolicy: Popup.NoAutoClose
 
         enter: Transition {
             NumberAnimation { property: "y"; from: parent.height; to: 0; duration: 300; easing.type: Easing.OutCubic }

@@ -147,6 +147,7 @@ private:
     bool m_micMuted = false;
     QStringList m_blockedUsers;
     QStringList m_dialingPeers;
+    void updateAndroidNotification();
 };
 
 #endif
