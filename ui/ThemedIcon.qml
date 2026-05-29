@@ -40,5 +40,6 @@ Item {
         anchors.fill: img
         source: img
         color: root.iconColor
+        visible: img.status === Image.Ready
     }
 }

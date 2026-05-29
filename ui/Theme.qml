@@ -1,12 +1,18 @@
 pragma Singleton
 import QtQuick
+import QtCore
 
 QtObject {
     id: theme
 
     // --- Mode Control ---
     // 0 = follow system, 1 = force dark, 2 = force light
-    property int themeMode: 0
+    property alias themeMode: mySettings.themeMode
+
+    property var mySettings: Settings {
+        category: "Theme"
+        property int themeMode: 0
+    }
 
     // Resolved: is the current theme dark?
     readonly property bool isDark: {
