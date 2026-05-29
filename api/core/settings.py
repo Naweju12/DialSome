@@ -28,14 +28,16 @@ POSTGREDSQL_URI = str(ENV.get("POSTGRESQL_URI"))
 if not ENV.exist("EDDSA_PRIVATE_KEY"):
   raise EnvironmentError("EDDSA_PRIVATE_KEY can't be empty")
 EDDSA_KEY = eddsa.EdDSA(
-  base64.b64decode(str(ENV.get("EDDSA_PRIVATE_KEY"))).decode()
+  str(ENV.get("EDDSA_PRIVATE_KEY")).strip('"').strip("'").replace("\\n", "\n")
 )
 
 # Firebase Service Account
 if not ENV.exist("FIREBASE_SERVICE_ACCOUNT"):
   raise EnvironmentError("FIREBASE_SERVICE_ACCOUNT can't be empty")
 FIREBASE_SERVICE_ACCOUNT = json.loads(
-  base64.b64decode(str(ENV.get("FIREBASE_SERVICE_ACCOUNT"))).decode()
+  base64.b64decode(
+    str(ENV.get("FIREBASE_SERVICE_ACCOUNT")).strip('"').strip("'").replace("\\n", "")
+  ).decode()
 )
 
 # User Token
