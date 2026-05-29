@@ -10,6 +10,14 @@ Rectangle {
         ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
     }
 
+    function handleBack() {
+        if (serverPopup.opened) {
+            serverPopup.close()
+            return true
+        }
+        return false
+    }
+
     ColumnLayout {
         id: settingsPage
         anchors.fill: parent

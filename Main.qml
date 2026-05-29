@@ -19,6 +19,22 @@ ApplicationWindow {
         ColorAnimation { duration: 300; easing.type: Easing.InOutQuad }
     }
 
+    onClosing: (close) => {
+        if (mainStack.currentItem && typeof mainStack.currentItem.handleBack === "function") {
+            if (mainStack.currentItem.handleBack()) {
+                close.accepted = false
+                return
+            }
+        }
+
+        if (mainStack.depth > 1) {
+            close.accepted = false
+            mainStack.pop()
+        } else {
+            close.accepted = true
+        }
+    }
+
     Backend {
         id: myBackend
 

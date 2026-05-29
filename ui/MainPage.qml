@@ -9,6 +9,22 @@ ColumnLayout {
     property string selectedContactName: ""
     property string selectedContactEmail: ""
 
+    function handleBack() {
+        if (contactDetailsPopup.opened) {
+            contactDetailsPopup.close()
+            return true
+        }
+        if (addContactPopup.opened) {
+            addContactPopup.close()
+            return true
+        }
+        if (fullScreenPermissionDialog.opened) {
+            fullScreenPermissionDialog.close()
+            return true
+        }
+        return false
+    }
+
     // --- HEADER ---
     Rectangle {
         id: titleSection

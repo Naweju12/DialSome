@@ -7,6 +7,11 @@ ColumnLayout {
     anchors.fill: parent
     spacing: 0
 
+    function handleBack() {
+        myBackend.endCall()
+        return true
+    }
+
     // --- CALLER INFO ---
     Rectangle {
         id: titleSection

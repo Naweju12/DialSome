@@ -7,6 +7,11 @@ Rectangle {
     id: callingPageRoot
     color: Theme.background
 
+    function handleBack() {
+        myBackend.endCall()
+        return true
+    }
+
     SoundEffect {
         id: ringbackSound
         source: "qrc:/qt/qml/DialSome/sounds/ringback.wav"
