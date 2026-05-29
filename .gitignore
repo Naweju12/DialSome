@@ -95,3 +95,7 @@ adb/
 
 # Gradle
 android/.gradle
+
+# Outputs
+outputs/
+.android/

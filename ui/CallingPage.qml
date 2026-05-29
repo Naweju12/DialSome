@@ -108,12 +108,13 @@ Rectangle {
                         radius: 64
                         color: Theme.surfaceVariant
 
-                        ThemedIcon {
+                        Image {
                             source: "../icons/user.png"
-                            iconColor: Theme.textSecondary
                             sourceSize: Qt.size(128, 128)
                             width: 128; height: 128
                             anchors.centerIn: parent
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
                         }
                     }
 

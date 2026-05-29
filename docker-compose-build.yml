@@ -1,0 +1,31 @@
+services:
+  build-android:
+    image: carlonluca/qt-dev:6.10.2
+    container_name: dialsome-android-builder
+    volumes:
+      - .:/app
+      - ./.android:/root/.android
+    working_dir: /app
+    entrypoint: >
+      bash -c "
+      echo '=========================================' &&
+      echo '      STARTING DIALSOME ANDROID BUILD     ' &&
+      echo '=========================================' &&
+      echo '1. Configuring CMake (Debug, arm64-v8a)...' &&
+      /opt/qt/6.10.2/android_arm64_v8a/bin/qt-cmake -S . -B build-arm64-v8a -GNinja -DCMAKE_BUILD_TYPE=Debug &&
+      echo '2. Compiling native code...' &&
+      /opt/qt/6.10.2/android_arm64_v8a/bin/qt-cmake --build ./build-arm64-v8a --target all &&
+      echo '3. Running androiddeployqt (building APK)...' &&
+      /opt/Qt-amd64-6.10.2/bin/androiddeployqt --input ./build-arm64-v8a/android-DialSome-deployment-settings.json --output ./build-arm64-v8a/android-build --android-platform android-36 --jdk=/usr/lib/jvm/java-21-openjdk-amd64 --gradle &&
+      echo '4. Copying final APK to outputs/...' &&
+      mkdir -p outputs &&
+      cp ./build-arm64-v8a/android-build/build/outputs/apk/debug/android-build-debug.apk ./outputs/DialSome-arm64-v8a.apk &&
+      echo '=========================================' &&
+      echo '       BUILD COMPLETED SUCCESSFULLY!      ' &&
+      echo '   APK is at: outputs/DialSome-arm64-v8a.apk' &&
+      echo '-----------------------------------------' &&
+      echo 'To use Google Sign-In with this local build,' &&
+      echo 'add this SHA-1 fingerprint to your Firebase Console:' &&
+      keytool -list -v -keystore /root/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android | grep -i SHA1 &&
+      echo '========================================='
+      "

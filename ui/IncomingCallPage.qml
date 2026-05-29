@@ -89,12 +89,13 @@ ColumnLayout {
                     border.color: Theme.border
                     border.width: 1
 
-                    ThemedIcon {
+                    Image {
                         source: "../icons/user.png"
-                        iconColor: Theme.textSecondary
                         sourceSize: Qt.size(100, 100)
                         width: 100; height: 100
                         anchors.centerIn: parent
+                        fillMode: Image.PreserveAspectFit
+                        smooth: true
                     }
                 }
             }

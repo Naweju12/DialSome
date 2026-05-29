@@ -33,13 +33,10 @@ Item {
         anchors.fill: parent
         fillMode: Image.PreserveAspectFit
         smooth: true
-        visible: false  // hidden; ColorOverlay renders instead
-    }
-
-    ColorOverlay {
-        anchors.fill: img
-        source: img
-        color: root.iconColor
-        visible: img.status === Image.Ready
+        
+        layer.enabled: true
+        layer.effect: ColorOverlay {
+            color: root.iconColor
+        }
     }
 }
